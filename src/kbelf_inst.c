@@ -36,11 +36,11 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
 	// Allocate memory.
 	kbelf_inst inst = kbelfx_malloc(sizeof(struct struct_kbelf_inst));
 	if (!inst) KBELF_ERROR(abort, "Out of memory")
-	memset(inst, 0, sizeof(struct struct_kbelf_inst));
+	kbelfq_memset(inst, 0, sizeof(struct struct_kbelf_inst));
 	inst->pid = pid;
 	
 	// Copy the path.
-	size_t path_len = strlen(file->path);
+	size_t path_len = kbelfq_strlen(file->path);
 	inst->path = kbelfx_malloc(path_len + 1);
 	if (!inst->path) KBELF_ERROR(abort, "Out of memory")
 	inst->name = file->name - file->path + inst->path;
@@ -58,7 +58,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
 	inst->segments_len = loadable_len;
 	inst->segments = kbelfx_malloc(loadable_len * sizeof(kbelf_segment));
 	if (!inst->segments) KBELF_ERROR(abort, "Out of memory");
-	memset(inst->segments, 0, loadable_len * sizeof(kbelf_segment));
+	kbelfq_memset(inst->segments, 0, loadable_len * sizeof(kbelf_segment));
 	
 	// Interpret program headers.
 	for (size_t i = 0, li = 0; li < loadable_len; i++) {
@@ -96,7 +96,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
 		}
 		// Zero-initialised data.
 		if (prog.file_size < prog.mem_size) {
-			memset((void *) (inst->segments[li].paddr + prog.file_size), 0, prog.mem_size - prog.file_size);
+			kbelfq_memset((void *) (inst->segments[li].paddr + prog.file_size), 0, prog.mem_size - prog.file_size);
 		}
 		
 		li ++;

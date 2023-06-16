@@ -34,7 +34,7 @@ kbelf_file kbelf_file_open(const char *path, void *fd) {
 	// Allocate memories.
 	kbelf_file file = kbelfx_malloc(sizeof(struct struct_kbelf_file));
 	if (!file) KBELF_ERROR(abort, "Out of memory")
-	memset(file, 0, sizeof(struct struct_kbelf_file));
+	kbelfq_memset(file, 0, sizeof(struct struct_kbelf_file));
 	
 	// Try to open file handle.
 	if (!fd) {
@@ -45,15 +45,15 @@ kbelf_file kbelf_file_open(const char *path, void *fd) {
 	
 	
 	// Create a copy of path.
-	size_t path_len = strlen(path);
+	size_t path_len = kbelfq_strlen(path);
 	file->path = kbelfx_malloc(path_len + 1);
 	if (!file->path) KBELF_ERROR(abort, "Out of memory")
-	strcpy(file->path, path);
+	kbelfq_strcpy(file->path, path);
 	
 	// Find filename.
-	const char *c0 = strrchr(file->path, '/');
+	const char *c0 = kbelfq_strrchr(file->path, '/');
 	#if defined(_WIN32) || defined(WIN32)
-	const char *c1 = strrchr(file->path, '\\');
+	const char *c1 = kbelfq_strrchr(file->path, '\\');
 	if (c1 > c0) c0 = c1;
 	#endif
 	file->name = c0 ? c0 + 1 : file->path;
@@ -65,7 +65,7 @@ kbelf_file kbelf_file_open(const char *path, void *fd) {
 	
 	
 	// Validate header.
-	if (memcmp(file->header.magic, kbelf_magic, 4)) KBELF_ERROR(abort, "Invalid magic")
+	if (!kbelfq_memeq(file->header.magic, kbelf_magic, 4)) KBELF_ERROR(abort, "Invalid magic")
 	if (file->header.word_size != KBELF_CLASS) KBELF_ERROR(abort, "Invalid or unsupported class")
 	if (file->header.endianness != KBELF_ENDIANNESS) KBELF_ERROR(abort, "Invalid or unsupported endianness")
 	if (file->header.version != 1) KBELF_ERROR(abort, "Invalid or unsupported version")

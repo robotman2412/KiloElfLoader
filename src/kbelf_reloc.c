@@ -30,7 +30,7 @@
 kbelf_reloc kbelf_reloc_create() {
 	kbelf_reloc reloc = kbelfx_malloc(sizeof(struct struct_kbelf_reloc));
 	if (!reloc) return NULL;
-	memset(reloc, 0, sizeof(struct struct_kbelf_reloc));
+	kbelfq_memset(reloc, 0, sizeof(struct struct_kbelf_reloc));
 	return reloc;
 }
 
@@ -61,7 +61,7 @@ static bool find_sym(kbelf_reloc reloc, const char *sym_name, kbelf_addr *out_va
 		const kbelf_builtin_lib *lib = reloc->builtins[x];
 		for (size_t y = 0; y < lib->symbols_len; y++) {
 			kbelf_builtin_sym sym = lib->symbols[y];
-			if (strcmp(sym.name, sym_name)) continue;
+			if (!kbelfq_streq(sym.name, sym_name)) continue;
 			*out_val = sym.vaddr;
 			return true;
 		}
@@ -79,7 +79,7 @@ static bool find_sym(kbelf_reloc reloc, const char *sym_name, kbelf_addr *out_va
 			if (KBELF_ST_BIND(sym.info) == STB_LOCAL) continue;
 			// Compare the name.
 			const char *name = inst->dynstr + sym.name_index;
-			if (strcmp(name, sym_name)) continue;
+			if (!kbelfq_streq(name, sym_name)) continue;
 			// Eliminate the weak.
 			*out_val = get_sym_value(file, inst, sym);
 			if (KBELF_ST_BIND(sym.info) != STB_WEAK) return true;

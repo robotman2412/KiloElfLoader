@@ -31,7 +31,7 @@ kbelf_dyn kbelf_dyn_create(int pid) {
 	// Allocate memory.
 	kbelf_dyn dyn = kbelfx_malloc(sizeof(struct struct_kbelf_dyn));
 	if (!dyn) KBELF_ERROR(abort, "Out of memory")
-	memset(dyn, 0, sizeof(struct struct_kbelf_dyn));
+	kbelfq_memset(dyn, 0, sizeof(struct struct_kbelf_dyn));
 	
 	dyn->pid = pid;
 	return dyn;
@@ -83,9 +83,9 @@ bool kbelf_dyn_set_exec(kbelf_dyn dyn, const char *path, void *fd) {
 
 // Extract filename from path.
 static const char *path_to_filename(const char *path) {
-	const char *c0 = strrchr(path, '/');
+	const char *c0 = kbelfq_strrchr(path, '/');
 	#if defined(_WIN32) || defined(WIN32)
-	const char *c1 = strrchr(path, '\\');
+	const char *c1 = kbelfq_strrchr(path, '\\');
 	if (c1 > c0) c0 = c1;
 	#endif
 	if (c0) path = c0 + 1;
@@ -111,7 +111,7 @@ static bool add_lib(kbelf_dyn dyn, kbelf_file file, kbelf_inst inst) {
 // Find a built-in library.
 static const kbelf_builtin_lib *find_builtin(const char *needed) {
 	for (size_t i = 0; i < kbelfx_builtin_libs_len; i++) {
-		if (!strcmp(path_to_filename(needed), path_to_filename(kbelfx_builtin_libs[i].path))) return &kbelfx_builtin_libs[i];
+		if (kbelfq_streq(path_to_filename(needed), path_to_filename(kbelfx_builtin_libs[i].path))) return &kbelfx_builtin_libs[i];
 	}
 	return NULL;
 }
@@ -131,10 +131,10 @@ static bool add_builtin(kbelf_dyn dyn, const kbelf_builtin_lib *lib) {
 static bool check_lib(kbelf_dyn dyn, const char *needed) {
 	needed = path_to_filename(needed);
 	for (size_t i = 0; i < dyn->builtins_len; i++) {
-		if (!strcmp(path_to_filename(dyn->builtins[i]->path), needed)) return true;
+		if (kbelfq_streq(path_to_filename(dyn->builtins[i]->path), needed)) return true;
 	}
 	for (size_t i = 0; i < dyn->libs_len; i++) {
-		if (!strcmp(dyn->libs_file[i]->name, needed)) return true;
+		if (kbelfq_streq(dyn->libs_file[i]->name, needed)) return true;
 	}
 	return false;
 }
@@ -182,9 +182,9 @@ static bool _depends_on_r(kbelf_dyn dyn, kbelf_inst a, kbelf_inst b, int recursi
 		if (dt.tag == DT_NEEDED) {
 			const char *needed = a->dynstr + dt.value;
 			needed = path_to_filename(needed);
-			if (!strcmp(needed, b->name)) return true;
+			if (kbelfq_streq(needed, b->name)) return true;
 			for (size_t x = 0; x < dyn->libs_len; x++) {
-				if (!strcmp(dyn->libs_inst[x]->name, needed)) {
+				if (kbelfq_streq(dyn->libs_inst[x]->name, needed)) {
 					if (_depends_on_r(dyn, dyn->libs_inst[x], b, recursion_limit - 1)) return true;
 				}
 			}
@@ -245,7 +245,7 @@ static void _sort_init_order_r(kbelf_dyn dyn, size_t *arr, size_t len, size_t *t
 			tmp[i] = arr[l++];
 		}
 	}
-	memcpy(arr, tmp, sizeof(size_t) * len);
+	kbelfq_memcpy(arr, tmp, sizeof(size_t) * len);
 }
 
 // Sort the initialisation order.

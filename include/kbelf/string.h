@@ -27,10 +27,19 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <kbelf/string.h>
 
-#include <kbelf/machine.h>
+// Measure the length of `str`.
+size_t kbelfq_strlen(const char *str) __attribute__((pure));
+// Copy string from `src` to `dst`.
+void kbelfq_strcpy(char *dst, const char *src);
+// Find last occurrance of `c` in `str`.
+const char *kbelfq_strrchr(const char *str, char c) __attribute__((pure));
+// Compare string `a` to `b`.
+bool kbelfq_streq(const char *a, const char *b) __attribute__((pure));
 
-#if KBELF_IS_ELF64
-#error "64-bit ELF is currently unsupported"
-#endif
+// Copy memory from `src` to `dst`.
+void kbelfq_memcpy(void *dst, const void *src, size_t nmemb);
+// Fill memory `dst` with `c`.
+void kbelfq_memset(void *dst, uint8_t c, size_t nmemb);
+// Compare memory `a` to `b`.
+bool kbelfq_memeq(const void *a, const void *b, size_t nmemb) __attribute__((pure));

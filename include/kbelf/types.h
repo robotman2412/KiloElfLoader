@@ -238,7 +238,7 @@ struct struct_kbelf_dyn {
 
 #include <stdio.h>
 
-#define KBELF_FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#define KBELF_FILENAME (kbelfq_strrchr(__FILE__, '/') ? kbelfq_strrchr(__FILE__, '/') + 1 : __FILE__)
 #define KBELF_LOGD(fmt, ...) { printf("\033[34mKBELF: %s:%d: " fmt "\033[0m\n", KBELF_FILENAME, __LINE__ __VA_OPT__(,) __VA_ARGS__); }
 #define KBELF_LOGI(fmt, ...) { printf("\033[32mKBELF: %s:%d: " fmt "\033[0m\n", KBELF_FILENAME, __LINE__ __VA_OPT__(,) __VA_ARGS__); }
 #define KBELF_LOGW(fmt, ...) { printf("\033[33mKBELF: %s:%d: " fmt "\033[0m\n", KBELF_FILENAME, __LINE__ __VA_OPT__(,) __VA_ARGS__); }
