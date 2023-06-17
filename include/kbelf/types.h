@@ -214,8 +214,6 @@ struct struct_kbelf_dyn {
 	// Built-in libraries.
 	const kbelf_builtin_lib **builtins;
 	
-	// Process image successfully created.
-	bool                      image;
 	// Entrypoint virtual address.
 	kbelf_addr                entrypoint;
 	

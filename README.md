@@ -28,7 +28,7 @@ kbelf_dyn dyn = kbelf_dyn_create(1);
 // Specify the executable file to load.
 kbelf_dyn_set_exec(dyn, "a.out", NULL);
 // Attempt to load the executable and create a process image.
-kbelf_dyn_perform(dyn);
+kbelf_dyn_load(dyn);
 ```
 
 If all three functions return `true`/nonnull, you have successfully loaded a dynamic executable and its library dependencies.

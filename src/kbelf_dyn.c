@@ -46,10 +46,10 @@ kbelf_dyn kbelf_dyn_create(int pid) {
 void kbelf_dyn_destroy(kbelf_dyn dyn) {
 	if (!dyn) return;
 	if (dyn->exec_file) kbelf_file_close(dyn->exec_file);
-	if (dyn->exec_inst) kbelf_inst_unload(dyn->exec_inst);
+	if (dyn->exec_inst) kbelf_inst_destroy(dyn->exec_inst);
 	for (size_t i = 0; i < dyn->libs_len; i++) {
 		kbelf_file_close(dyn->libs_file[i]);
-		if (!dyn->image) kbelf_inst_unload(dyn->libs_inst[i]);
+		kbelf_inst_destroy(dyn->libs_inst[i]);
 	}
 	if (dyn->libs_len) {
 		kbelfx_free(dyn->libs_file);
@@ -262,7 +262,7 @@ static inline bool sort_init_order(kbelf_dyn dyn) {
 
 // Interpret the files and create a process image.
 // Returns success status.
-bool kbelf_dyn_perform(kbelf_dyn dyn) {
+bool kbelf_dyn_load(kbelf_dyn dyn) {
 	kbelf_reloc reloc = NULL;
 	if (!dyn) return false;
 	if (!dyn->exec_file) KBELF_ERROR(abort, "No executable file")

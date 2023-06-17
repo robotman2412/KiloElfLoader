@@ -166,12 +166,22 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
 	return NULL;
 }
 
-// Unloads an instance created with `kbelf_load`.
+// Unloads an instance created with `kbelf_load` and clean up the handle.
 void kbelf_inst_unload(kbelf_inst inst) {
 	if (!inst) return;
 	if (inst->path) kbelfx_free(inst->path);
 	if (inst->segments_len) {
 		kbelfx_seg_free(inst->segments_len, inst->segments);
+		kbelfx_free(inst->segments);
+	}
+	kbelfx_free(inst);
+}
+
+// Clean up the instance handle but not the loaded segments.
+void kbelf_inst_destroy(kbelf_inst inst) {
+	if (!inst) return;
+	if (inst->path) kbelfx_free(inst->path);
+	if (inst->segments_len) {
 		kbelfx_free(inst->segments);
 	}
 	kbelfx_free(inst);
