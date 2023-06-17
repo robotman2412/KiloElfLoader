@@ -24,6 +24,7 @@
 
 #define KBELF_REVEAL_PRIVATE
 #include <kbelf.h>
+#include <kbelf/port.h>
 
 // Create a context for interpreting an ELF file.
 // The `fd` argument is saved and passed to the file I/O functions.
@@ -77,6 +78,9 @@ kbelf_file kbelf_file_open(const char *path, void *fd) {
 	if (file->header.size != sizeof(file->header)) KBELF_ERROR(abort, "Invalid header size")
 	if (file->header.ph_ent_size != sizeof(kbelf_progheader)) KBELF_ERROR(abort, "Invalid program header entry size")
 	if (file->header.sh_ent_size != sizeof(kbelf_sectheader)) KBELF_ERROR(abort, "Invalid section header entry size")
+	
+	// Architecture-specific verification.
+	if (!kbelfp_file_verify(file)) goto abort;
 	
 	// Successfully opened.
 	return file;

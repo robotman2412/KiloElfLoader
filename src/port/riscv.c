@@ -24,7 +24,105 @@
 
 #define KBELF_REVEAL_PRIVATE
 #include <kbelf.h>
-#include <kbelf/reloc.h>
+#include <kbelf/port.h>
+
+
+
+/* ==== How to detect RISC-V ==== */
+// Define `__riscv` for RISC-V based targets.
+// Define `__riscv_a` for atomics extension.
+// Define `__riscv_c` for compressed instructions extension.
+// Define `__riscv_e` for 16-register base ISA.
+// Define `__riscv_i` for integer base ISA.
+// Define `__riscv_xlen` as 32, 64 or 128 to detect word size.
+// Define `__riscv_float_abi_soft` to detect soft-float.
+// Define `__riscv_float_abi_single` to detect single-precision float.
+// Define `__riscv_float_abi_double` to detect double-precision float.
+
+/* ==== Verification ==== */
+
+// Header flags: Contains compressed instructions.
+#define KBELF_RISCV_FLAG_RVC         0x0001
+
+// Header flags: Floating-point ABI mask.
+#define KBELF_RISCV_MASK_FABI        0x0006
+// Header flags: Uses soft-float ABI.
+#define KBELF_RISCV_FLAG_FABI_SOFT   0x0000
+// Header flags: Uses single-precision float ABI.
+#define KBELF_RISCV_FLAG_FABI_SINGLE 0x0002
+// Header flags: Uses double-precision float ABI.
+#define KBELF_RISCV_FLAG_FABI_DOUBLE 0x0004
+// Header flags: Uses quadruple-precision float ABI.
+#define KBELF_RISCV_FLAG_FABI_QUAD   0x0006
+
+// Header flags: Uses only the RV32E register subset.
+#define KBELF_RISCV_FLAG_RVE         0x0008
+// Header flags: Requires the RVTSO memory ordering model.
+#define KBELF_RISCV_FLAG_TSO         0x0010
+
+// Detect RVC.
+#ifdef __riscv_c
+#define KBELF_RISCV_HOST_RVC KBELF_RISCV_FLAG_RVC
+#else
+#define KBELF_RISCV_HOST_RVC 0
+#endif
+
+// Detect floating-point ABI.
+#ifdef __riscv_float_abi_double
+#define KBELF_RISCV_HOST_FABI KBELF_RISCV_FLAG_FABI_DOUBLE
+#elif defined(__riscv_float_abi_single)
+#define KBELF_RISCV_HOST_FABI KBELF_RISCV_FLAG_FABI_SINGLE
+#elif defined(__riscv_float_abi_soft)
+#define KBELF_RISCV_HOST_FABI KBELF_RISCV_FLAG_FABI_SOFT
+#else
+#warning "Unable to detect floating-point ABI: Assuming soft-float."
+#define KBELF_RISCV_HOST_FABI KBELF_RISCV_FLAG_FABI_SOFT
+#endif
+
+// Detect RV32E.
+#ifdef __riscv_e
+#define KBELF_RISCV_HOST_RVE KBELF_RISCV_FLAG_RVE
+#else
+#define KBELF_RISCV_HOST_RVE 0
+#endif
+
+// TODO: Detect RVTSO.
+#define KBELF_RISCV_HOST_RVTSO 0
+
+// Perform target-specific verification of `kbelf_file`.
+bool kbelfp_file_verify(kbelf_file file) {
+	if ((file->header.flags & KBELF_RISCV_FLAG_RVC) && !KBELF_RISCV_HOST_RVC) {
+		KBELF_ERROR(abort, "Unsupported machine (RVC requested but not supported)")
+	}
+	if ((file->header.flags & KBELF_RISCV_MASK_FABI) != KBELF_RISCV_HOST_FABI) {
+		const char *fabi[] = {
+			"soft-float",
+			"single-precision",
+			"double-precision",
+			"quadruple-precision",
+		};
+		KBELF_ERROR(abort,
+			"Unsupported machine (FABI %s requested; acutal FABI %s)",
+			fabi[(file->header.flags & KBELF_RISCV_MASK_FABI) >> 1],
+			fabi[(KBELF_RISCV_HOST_FABI) >> 1]
+		)
+	}
+	if ((file->header.flags & KBELF_RISCV_FLAG_RVE) && !KBELF_RISCV_HOST_RVE) {
+		KBELF_ERROR(abort, "Unsupported machine (RVE requested but not supported)")
+	}
+	if (!(file->header.flags & KBELF_RISCV_FLAG_RVE) && KBELF_RISCV_HOST_RVE) {
+		KBELF_ERROR(abort, "Unsupported machine (RVI requested but not supported)")
+	}
+	
+	return true;
+	
+	abort:
+	return false;
+}
+
+
+
+/* ==== Relocation ==== */
 
 /*
 A			Addend field in the relocation entry associated with the symbol
@@ -62,16 +160,11 @@ typedef enum {
 		} \
 	} while(0)
 
-
-
-
 // Obtain the value of an implicit addend.
 kbelf_addr kbelfp_reloc_get_addend(kbelf_file file, kbelf_inst inst, uint32_t type, const uint8_t *ptr) {
 	// TODO.
 	return 0;
 }
-
-
 
 #define A addend
 #define S sym

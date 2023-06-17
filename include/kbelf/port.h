@@ -31,6 +31,11 @@ extern "C" {
 #endif
 
 
+/* ==== Verification ==== */
+
+// Perform target-specific verification of `kbelf_file`.
+bool       kbelfp_file_verify(kbelf_file file);
+
 
 /* ==== Relocation ==== */
 

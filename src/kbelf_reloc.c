@@ -24,7 +24,7 @@
 
 #define KBELF_REVEAL_PRIVATE
 #include <kbelf.h>
-#include <kbelf/reloc.h>
+#include <kbelf/port.h>
 
 // Create an empty relocation context.
 kbelf_reloc kbelf_reloc_create() {
