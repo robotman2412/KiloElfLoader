@@ -59,30 +59,31 @@ typedef void *kbelf_dyn;
 typedef struct {
 	// Cookie value from segment memory allocator.
 	// Not used or modified by KBELF.
-	void      *alloc_cookie;
+	void       *alloc_cookie;
 	// Identifier value as specified when program loading was initiated.
-	int        pid;
+	int         pid;
 	
-	// Loaded segment physical address.
+	// Loaded segment memory address.
 	// Used to read and write segment data.
-	kbelf_addr paddr;
+	// Equal to `paddr` unless KBELF is cross-compiled.
+	kbelf_laddr laddr;
+	// Loaded segment physical address.
+	// Used to read and set up memory mapping.
+	kbelf_addr  paddr;
 	// Loaded segment virtual address.
 	// Used to perform segment relocations.
-	kbelf_addr vaddr_real;
+	kbelf_addr  vaddr_real;
 	// Virtual address as requested by the ELF file.
-	kbelf_addr vaddr_req;
+	kbelf_addr  vaddr_req;
 	// Size in memory.
-	kbelf_addr size;
+	kbelf_addr  size;
 	
 	// Loaded segment read permission.
-	// KBELF assumes it can read despite the value of this bit.
-	bool       r;
+	bool        r;
 	// Loaded segment write permission.
-	// KBELF assumes it can write despite the value of this bit.
-	bool       w;
+	bool        w;
 	// Loaded segment exec permission.
-	// KBELF will refuse to start the executable if the executable bit is not set for the segment within which the entrypoint lies.
-	bool       x;
+	bool        x;
 } kbelf_segment;
 
 // Symbol definition for a built-in library.
@@ -167,15 +168,15 @@ struct struct_kbelf_inst {
 	
 	// Length of the dynamic table.
 	size_t                dynamic_len;
-	// Physical address of the dynamic table.
+	// Load address of the dynamic table.
 	const kbelf_dynentry *dynamic;
 	// Length of the dynamic string table.
 	size_t                dynstr_len;
-	// Physical address of the dynamic string table.
+	// Load address of the dynamic string table.
 	const char           *dynstr;
 	// Number of dynamic symbols.
 	size_t                dynsym_len;
-	// Physical address of dynamic symbol table.
+	// Load address of dynamic symbol table.
 	const kbelf_symentry *dynsym;
 };
 

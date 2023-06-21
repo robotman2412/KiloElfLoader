@@ -39,6 +39,8 @@ extern "C" {
 
 
 
+// Load address tyoe.
+typedef size_t kbelf_laddr;
 // ELF address type.
 typedef uint32_t kbelf_addr;
 // ELF addrdiff type.

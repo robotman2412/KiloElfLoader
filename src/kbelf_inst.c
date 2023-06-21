@@ -91,12 +91,14 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
 		if (prog.file_size) {
 			int res = kbelfx_seek(file->fd, prog.offset);
 			if (res < 0) KBELF_ERROR(abort, "I/O error");
-			res = kbelfx_read(file->fd, (void *) inst->segments[li].paddr, prog.file_size);
+			kbelf_laddr laddr = kbelf_inst_paddr_to_laddr(inst, inst->segments[li].paddr);
+			res = kbelfx_read(file->fd, (void *) laddr, prog.file_size);
 			if (res < prog.file_size) KBELF_ERROR(abort, "I/O error");
 		}
 		// Zero-initialised data.
 		if (prog.file_size < prog.mem_size) {
-			kbelfq_memset((void *) (inst->segments[li].paddr + prog.file_size), 0, prog.mem_size - prog.file_size);
+			kbelf_laddr laddr = kbelf_inst_paddr_to_laddr(inst, inst->segments[li].paddr + prog.file_size);
+			kbelfq_memset((void *) laddr, 0, prog.mem_size - prog.file_size);
 		}
 		
 		li ++;
@@ -112,7 +114,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
 		kbelf_progheader prog;
 		if (!kbelf_file_prog_get(file, &prog, i)) KBELF_ERROR(abort, "Unable to read program header %zu", i)
 		if (prog.type == PT_DYNAMIC) {
-			inst->dynamic = (void *) kbelf_inst_getpaddr(inst, prog.vaddr);
+			inst->dynamic = (void *) kbelf_inst_getladdr(inst, prog.vaddr);
 			inst->dynamic_len = prog.mem_size / sizeof(kbelf_dynentry);
 			break;
 		}
@@ -125,17 +127,17 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
 			inst->dynamic_len = i;
 			break;
 		} else if (dt.tag == DT_SYMTAB) {
-			inst->dynsym = (void *) kbelf_inst_getpaddr(inst, dt.value);
+			inst->dynsym = (void *) kbelf_inst_getladdr(inst, dt.value);
 		} else if (dt.tag == DT_STRTAB) {
-			inst->dynstr = (void *) kbelf_inst_getpaddr(inst, dt.value);
+			inst->dynstr = (void *) kbelf_inst_getladdr(inst, dt.value);
 		} else if (dt.tag == DT_STRSZ) {
 			inst->dynstr_len = dt.value;
 		} else if (dt.tag == DT_INIT) {
-			inst->init_func = kbelf_inst_getpaddr(inst, dt.value);
+			inst->init_func = kbelf_inst_getvaddr(inst, dt.value);
 		} else if (dt.tag == DT_FINI) {
-			inst->fini_func = kbelf_inst_getpaddr(inst, dt.value);
+			inst->fini_func = kbelf_inst_getvaddr(inst, dt.value);
 		} else if (dt.tag == DT_HASH) {
-			kbelf_addr *addr = (void *) kbelf_inst_getpaddr(inst, dt.value);
+			kbelf_addr *addr = (void *) kbelf_inst_getladdr(inst, dt.value);
 			inst->dynsym_len = addr[1];
 		} else if (dt.tag == DT_INIT_ARRAY) {
 			inst->init_array = kbelf_inst_getvaddr(inst, dt.value);
@@ -187,11 +189,23 @@ void kbelf_inst_destroy(kbelf_inst inst) {
 	kbelfx_free(inst);
 }
 
+// Translate a virtual address to a load address in a loaded instance.
+// Typically used by an ELF loader/interpreter.
+kbelf_laddr kbelf_inst_getladdr(kbelf_inst inst, kbelf_addr vaddr) {
+	if (!inst) return 0;
+	for (size_t i = 0; i < inst->segments_len; i++) {
+		if (vaddr >= inst->segments[i].vaddr_req && vaddr < inst->segments[i].vaddr_req + inst->segments[i].size) {
+			return vaddr - inst->segments[i].vaddr_req + inst->segments[i].laddr;
+		}
+	}
+	return 0;
+}
+
 // Translate a virtual address to a physical address in a loaded instance.
 kbelf_addr kbelf_inst_getpaddr(kbelf_inst inst, kbelf_addr vaddr) {
 	if (!inst) return 0;
 	for (size_t i = 0; i < inst->segments_len; i++) {
-		if (vaddr >= inst->segments[i].vaddr_req && vaddr < inst->segments[i].vaddr_real + inst->segments[i].size) {
+		if (vaddr >= inst->segments[i].vaddr_req && vaddr < inst->segments[i].vaddr_req + inst->segments[i].size) {
 			return vaddr - inst->segments[i].vaddr_req + inst->segments[i].paddr;
 		}
 	}
@@ -202,12 +216,79 @@ kbelf_addr kbelf_inst_getpaddr(kbelf_inst inst, kbelf_addr vaddr) {
 kbelf_addr kbelf_inst_getvaddr(kbelf_inst inst, kbelf_addr vaddr) {
 	if (!inst) return 0;
 	for (size_t i = 0; i < inst->segments_len; i++) {
-		if (vaddr >= inst->segments[i].vaddr_req && vaddr < inst->segments[i].vaddr_real + inst->segments[i].size) {
+		if (vaddr >= inst->segments[i].vaddr_req && vaddr < inst->segments[i].vaddr_req + inst->segments[i].size) {
 			return vaddr - inst->segments[i].vaddr_req + inst->segments[i].vaddr_real;
 		}
 	}
 	return 0;
 }
+
+// Translate a virtual address in a loaded instance to a physical address in a loaded instance.
+kbelf_addr kbelf_inst_vaddr_to_paddr(kbelf_inst inst, kbelf_addr vaddr) {
+	if (!inst) return 0;
+	for (size_t i = 0; i < inst->segments_len; i++) {
+		if (vaddr >= inst->segments[i].vaddr_real && vaddr < inst->segments[i].vaddr_real + inst->segments[i].size) {
+			return vaddr - inst->segments[i].vaddr_real + inst->segments[i].paddr;
+		}
+	}
+	return 0;
+}
+
+// Translate a virtual address in a loaded instance to a load address in a loaded instance.
+kbelf_laddr kbelf_inst_vaddr_to_laddr(kbelf_inst inst, kbelf_addr vaddr) {
+	if (!inst) return 0;
+	for (size_t i = 0; i < inst->segments_len; i++) {
+		if (vaddr >= inst->segments[i].vaddr_real && vaddr < inst->segments[i].vaddr_real + inst->segments[i].size) {
+			return vaddr - inst->segments[i].vaddr_real + inst->segments[i].laddr;
+		}
+	}
+	return 0;
+}
+
+// Translate a physical address in a loaded instance to a virtual address in a loaded instance.
+kbelf_addr kbelf_inst_paddr_to_vaddr(kbelf_inst inst, kbelf_addr vaddr) {
+	if (!inst) return 0;
+	for (size_t i = 0; i < inst->segments_len; i++) {
+		if (vaddr >= inst->segments[i].paddr && vaddr < inst->segments[i].paddr + inst->segments[i].size) {
+			return vaddr - inst->segments[i].paddr + inst->segments[i].vaddr_real;
+		}
+	}
+	return 0;
+}
+
+// Translate a physical address in a loaded instance to a load address in a loaded instance.
+kbelf_laddr kbelf_inst_paddr_to_laddr(kbelf_inst inst, kbelf_addr vaddr) {
+	if (!inst) return 0;
+	for (size_t i = 0; i < inst->segments_len; i++) {
+		if (vaddr >= inst->segments[i].paddr && vaddr < inst->segments[i].paddr + inst->segments[i].size) {
+			return vaddr - inst->segments[i].paddr + inst->segments[i].laddr;
+		}
+	}
+	return 0;
+}
+
+// Translate a load address in a loaded instance to a virtual address in a loaded instance.
+kbelf_addr kbelf_inst_laddr_to_vaddr(kbelf_inst inst, kbelf_laddr vaddr) {
+	if (!inst) return 0;
+	for (size_t i = 0; i < inst->segments_len; i++) {
+		if (vaddr >= inst->segments[i].laddr && vaddr < inst->segments[i].laddr + inst->segments[i].size) {
+			return vaddr - inst->segments[i].laddr + inst->segments[i].vaddr_real;
+		}
+	}
+	return 0;
+}
+
+// Translate a load address in a loaded instance to a physical address in a loaded instance.
+kbelf_addr kbelf_inst_laddr_to_paddr(kbelf_inst inst, kbelf_laddr vaddr) {
+	if (!inst) return 0;
+	for (size_t i = 0; i < inst->segments_len; i++) {
+		if (vaddr >= inst->segments[i].laddr && vaddr < inst->segments[i].laddr + inst->segments[i].size) {
+			return vaddr - inst->segments[i].laddr + inst->segments[i].paddr;
+		}
+	}
+	return 0;
+}
+
 
 // Get the entrypoint address of a loaded instance.
 kbelf_addr kbelf_inst_entrypoint(kbelf_inst inst) {
@@ -222,7 +303,7 @@ size_t kbelf_inst_preinit_len(kbelf_inst inst) {
 // Get virtual pre-initialisation function address of a loaded instance.
 kbelf_addr kbelf_inst_preinit_get(kbelf_inst inst, size_t index) {
 	if (!inst) return 0;
-	kbelf_addr *arr = (void *) kbelfx_vaddr_to_paddr(inst, inst->preinit_array);
+	kbelf_addr *arr = (void *) kbelf_inst_vaddr_to_laddr(inst, inst->preinit_array);
 	return index < inst->preinit_array_len ? arr[index] : 0;
 }
 
@@ -238,7 +319,7 @@ kbelf_addr kbelf_inst_init_get(kbelf_inst inst, size_t index) {
 		if (index == 0) return inst->init_func;
 		index --;
 	}
-	kbelf_addr *arr = (void *) kbelfx_vaddr_to_paddr(inst, inst->init_array);
+	kbelf_addr *arr = (void *) kbelf_inst_vaddr_to_laddr(inst, inst->init_array);
 	return index < inst->init_array_len ? arr[index] : 0;
 }
 
@@ -254,6 +335,6 @@ kbelf_addr kbelf_inst_fini_get(kbelf_inst inst, size_t index) {
 		if (index == 0) return inst->fini_func;
 		index --;
 	}
-	kbelf_addr *arr = (void *) kbelfx_vaddr_to_paddr(inst, inst->fini_array);
+	kbelf_addr *arr = (void *) kbelf_inst_vaddr_to_laddr(inst, inst->fini_array);
 	return index < inst->fini_array_len ? arr[index] : 0;
 }

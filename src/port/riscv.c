@@ -60,6 +60,7 @@
 // Header flags: Requires the RVTSO memory ordering model.
 #define KBELF_RISCV_FLAG_TSO         0x0010
 
+#ifndef KBELF_CROSS
 // Detect RVC.
 #ifdef __riscv_c
 #define KBELF_RISCV_HOST_RVC KBELF_RISCV_FLAG_RVC
@@ -88,6 +89,7 @@
 
 // TODO: Detect RVTSO.
 #define KBELF_RISCV_HOST_RVTSO 0
+#endif
 
 // Perform target-specific verification of `kbelf_file`.
 bool kbelfp_file_verify(kbelf_file file) {

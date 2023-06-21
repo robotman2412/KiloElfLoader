@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define SINGLE_ALLOC
-
 // Memory allocator function to use for allocating metadata.
 // User-defined.
 void *kbelfx_malloc(size_t len) {
@@ -49,10 +47,10 @@ bool kbelfx_seg_alloc(size_t segs_len, kbelf_segment *segs) {
 	
 	// Compute segment addresses.
 	for (size_t i = 0; i < segs_len; i++) {
-		kbelf_addr addr = (kbelf_addr) mem + segs[i].vaddr_req - addr_min;
+		kbelf_addr laddr = (kbelf_laddr) mem + segs[i].vaddr_req - addr_min;
 		segs[i].alloc_cookie = NULL;
-		segs[i].paddr        = addr;
-		segs[i].vaddr_real   = addr;
+		segs[i].laddr        = laddr;
+		segs[i].vaddr_real   = segs[i].vaddr_req;
 	}
 	segs[0].alloc_cookie = mem;
 }
@@ -62,13 +60,7 @@ bool kbelfx_seg_alloc(size_t segs_len, kbelf_segment *segs) {
 // User-defined.
 void kbelfx_seg_free(size_t segs_len, kbelf_segment *segs) {
 	if (!segs_len) return;
-	#ifdef SINGLE_ALLOC
 	free(segs[0].alloc_cookie);
-	#else
-	for (size_t i = 0; i < segs_len; i++) {
-		free(segs[i].alloc_cookie);
-	}
-	#endif
 }
 
 
@@ -110,27 +102,6 @@ int kbelfx_seek(void *fd, long pos) {
 // User-defined.
 kbelf_file kbelfx_find_lib(const char *needed) {
 	return kbelf_file_open(needed, NULL);
-}
-
-
-// Translate a physical address into a virtual address.
-// Returns nonzero on success, 0 on error.
-// User-defined.
-kbelf_addr kbelfx_paddr_to_vaddr(kbelf_inst inst, kbelf_addr paddr) {
-	return paddr;
-}
-
-// Translate a virtual address into a physical address.
-// Returns nonzero on success, 0 on error.
-// User-defined.
-kbelf_addr kbelfx_vaddr_to_paddr(kbelf_inst inst, kbelf_addr vaddr) {
-	return vaddr;
-}
-
-
-// Very simple printer built-in function.
-static void abi_pront(const char *strstr) {
-	fputs(strstr, stdout);
 }
 
 // Number of built-in libraries.

@@ -99,7 +99,7 @@ static bool rel_perform(kbelf_reloc reloc, kbelf_file file, kbelf_inst inst, siz
 // Perform all relocations from a RELA table.
 static bool rela_perform(kbelf_reloc reloc, kbelf_file file, kbelf_inst inst, size_t relatab_len, const kbelf_relaentry *relatab) {
 	for (size_t i = 0; i < relatab_len; i++) {
-		kbelf_addr     paddr   = kbelf_inst_getpaddr(inst, relatab[i].offset);
+		kbelf_laddr    laddr   = kbelf_inst_getladdr(inst, relatab[i].offset);
 		size_t         sym     = KBELF_R_SYM(relatab[i].info);
 		uint_fast8_t   type    = KBELF_R_TYPE(relatab[i].info);
 		kbelf_addrdiff addend  = relatab[i].addend;
@@ -110,7 +110,7 @@ static bool rela_perform(kbelf_reloc reloc, kbelf_file file, kbelf_inst inst, si
 			const char    *symname = inst->dynstr + inst->dynsym[sym].name_index;
 			if (!find_sym(reloc, symname, &symval)) KBELF_ERROR(abort, "Unable to find symbol %s", symname)
 		}
-		if (!kbelfp_reloc_apply(file, inst, type, symval, addend, (uint8_t *) paddr)) KBELF_ERROR(abort, "Applying relocation 0x%02x failed", type)
+		if (!kbelfp_reloc_apply(file, inst, type, symval, addend, (uint8_t *) laddr)) KBELF_ERROR(abort, "Applying relocation 0x%02x failed", type)
 	}
 	return true;
 	
@@ -135,13 +135,13 @@ bool kbelf_reloc_perform(kbelf_reloc reloc) {
 		for (size_t y = 0; y < inst->dynamic_len; y++) {
 			kbelf_dynentry dyn = inst->dynamic[y];
 			if (dyn.tag == DT_REL) {
-				rel = (void *) kbelf_inst_getpaddr(inst, dyn.value);
+				rel = (void *) kbelf_inst_getladdr(inst, dyn.value);
 			} else if (dyn.tag == DT_RELSZ) {
 				rel_sz = dyn.value;
 			} else if (dyn.tag == DT_RELENT) {
 				rel_ent = dyn.value;
 			} else if (dyn.tag == DT_RELA) {
-				rela = (void *) kbelf_inst_getpaddr(inst, dyn.value);
+				rela = (void *) kbelf_inst_getladdr(inst, dyn.value);
 			} else if (dyn.tag == DT_RELASZ) {
 				rela_sz = dyn.value;
 			} else if (dyn.tag == DT_RELAENT) {

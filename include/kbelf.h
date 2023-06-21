@@ -78,15 +78,6 @@ extern int   kbelfx_seek(void *fd, long pos);
 // User-defined.
 extern kbelf_file kbelfx_find_lib(const char *needed);
 
-// Translate a physical address into a virtual address.
-// Returns nonzero on success, 0 on error.
-// User-defined.
-extern kbelf_addr kbelfx_paddr_to_vaddr(kbelf_inst inst, kbelf_addr paddr);
-// Translate a virtual address into a physical address.
-// Returns nonzero on success, 0 on error.
-// User-defined.
-extern kbelf_addr kbelfx_vaddr_to_paddr(kbelf_inst inst, kbelf_addr vaddr);
-
 // Number of built-in libraries.
 // Optional user-defined.
 extern size_t kbelfx_builtin_libs_len;
@@ -122,31 +113,46 @@ bool       kbelf_file_prog_get(kbelf_file file, kbelf_progheader *prog, size_t i
 // Load all loadable segments from an ELF file.
 // The `pid` number is passed to `kbelfx_seg_alloc` and is otherwise ignored.
 // Returns non-null on success, NULL on error.
-kbelf_inst kbelf_inst_load       (kbelf_file file, int pid);
+kbelf_inst  kbelf_inst_load       (kbelf_file file, int pid);
 // Unloads an instance created with `kbelf_load` and clean up the handle.
-void       kbelf_inst_unload     (kbelf_inst inst);
+void        kbelf_inst_unload     (kbelf_inst inst);
 // Clean up the instance handle but not the loaded segments.
-void       kbelf_inst_destroy    (kbelf_inst inst);
+void        kbelf_inst_destroy    (kbelf_inst inst);
+// Translate a virtual address to a load address in a loaded instance.
+// Typically used by an ELF loader/interpreter.
+kbelf_laddr kbelf_inst_getladdr   (kbelf_inst inst, kbelf_addr vaddr) __attribute__((pure));
 // Translate a virtual address to a physical address in a loaded instance.
 // Typically used by the kernel.
-kbelf_addr kbelf_inst_getpaddr   (kbelf_inst inst, kbelf_addr vaddr) __attribute__((pure));
+kbelf_addr  kbelf_inst_getpaddr   (kbelf_inst inst, kbelf_addr vaddr) __attribute__((pure));
 // Translate a virtual address to a virtual address in a loaded instance.
-// Typically used by an ELF loader/interpreter.
-kbelf_addr kbelf_inst_getvaddr   (kbelf_inst inst, kbelf_addr vaddr) __attribute__((pure));
+// Typically used by the application.
+kbelf_addr  kbelf_inst_getvaddr   (kbelf_inst inst, kbelf_addr vaddr) __attribute__((pure));
+// Translate a virtual address in a loaded instance to a physical address in a loaded instance.
+kbelf_addr kbelf_inst_vaddr_to_paddr(kbelf_inst inst, kbelf_addr vaddr) __attribute__((pure));
+// Translate a virtual address in a loaded instance to a load address in a loaded instance.
+kbelf_laddr kbelf_inst_vaddr_to_laddr(kbelf_inst inst, kbelf_addr vaddr) __attribute__((pure));
+// Translate a physical address in a loaded instance to a virtual address in a loaded instance.
+kbelf_addr kbelf_inst_paddr_to_vaddr(kbelf_inst inst, kbelf_addr vaddr) __attribute__((pure));
+// Translate a physical address in a loaded instance to a load address in a loaded instance.
+kbelf_laddr kbelf_inst_paddr_to_laddr(kbelf_inst inst, kbelf_addr vaddr) __attribute__((pure));
+// Translate a load address in a loaded instance to a virtual address in a loaded instance.
+kbelf_addr kbelf_inst_laddr_to_vaddr(kbelf_inst inst, kbelf_laddr vaddr) __attribute__((pure));
+// Translate a load address in a loaded instance to a physical address in a loaded instance.
+kbelf_addr kbelf_inst_laddr_to_paddr(kbelf_inst inst, kbelf_laddr vaddr) __attribute__((pure));
 // Get the virtual entrypoint address of a loaded instance.
-kbelf_addr kbelf_inst_entrypoint (kbelf_inst inst) __attribute__((pure));
+kbelf_addr  kbelf_inst_entrypoint (kbelf_inst inst) __attribute__((pure));
 // Get the number of pre-initialisation functions.
-size_t     kbelf_inst_preinit_len(kbelf_inst inst) __attribute__((pure));
+size_t      kbelf_inst_preinit_len(kbelf_inst inst) __attribute__((pure));
 // Get virtual pre-initialisation function address of a loaded instance.
-kbelf_addr kbelf_inst_preinit_get(kbelf_inst inst, size_t index) __attribute__((pure));
+kbelf_addr  kbelf_inst_preinit_get(kbelf_inst inst, size_t index) __attribute__((pure));
 // Get the number of initialisation functions.
-size_t     kbelf_inst_init_len   (kbelf_inst inst) __attribute__((pure));
+size_t      kbelf_inst_init_len   (kbelf_inst inst) __attribute__((pure));
 // Get virtual initialisation function address of a loaded instance.
-kbelf_addr kbelf_inst_init_get   (kbelf_inst inst, size_t index) __attribute__((pure));
+kbelf_addr  kbelf_inst_init_get   (kbelf_inst inst, size_t index) __attribute__((pure));
 // Get the number of finalisation functions.
-size_t     kbelf_inst_fini_len   (kbelf_inst inst) __attribute__((pure));
+size_t      kbelf_inst_fini_len   (kbelf_inst inst) __attribute__((pure));
 // Get virtual finalisation function address of a loaded instance.
-kbelf_addr kbelf_inst_fini_get   (kbelf_inst inst, size_t index) __attribute__((pure));
+kbelf_addr  kbelf_inst_fini_get   (kbelf_inst inst, size_t index) __attribute__((pure));
 
 
 
