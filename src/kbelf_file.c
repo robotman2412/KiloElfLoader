@@ -42,7 +42,7 @@ kbelf_file kbelf_file_open(char const *path, void *fd) {
     if (!fd) {
         fd = kbelfx_open(path);
         if (!fd)
-            KBELF_ERROR(abort, "File not found")
+            KBELF_ERROR(abort, "File not found: " KBELF_FMT_CSTR, path)
     }
     file->fd = fd;
 
