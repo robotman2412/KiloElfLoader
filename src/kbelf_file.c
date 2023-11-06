@@ -67,7 +67,12 @@ kbelf_file kbelf_file_open(char const *path, void *fd) {
     // Load header.
     int len = kbelfx_read(file->fd, &file->header, sizeof(file->header));
     if (len != sizeof(file->header))
-        KBELF_ERROR(abort, "I/O error")
+        KBELF_ERROR(
+            abort,
+            "I/O error: expected " KBELF_FMT_SIZE " bytes, got " KBELF_FMT_DEC " bytes",
+            sizeof(file->header),
+            len
+        )
 
 
     // Validate header.

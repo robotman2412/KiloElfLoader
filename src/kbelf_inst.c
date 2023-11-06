@@ -47,6 +47,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
     inst->path      = kbelfx_malloc(path_len + 1);
     if (!inst->path)
         KBELF_ERROR(abort, "Out of memory")
+    kbelfq_memcpy(inst->path, file->path, path_len + 1);
     inst->name = file->name - file->path + inst->path;
 
     // Count number of loadable segments.
@@ -56,7 +57,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
     for (size_t i = 0; i < file->header.ph_ent_num; i++) {
         kbelf_progheader prog = {.type = PT_UNUSED, .mem_size = 0};
         if (!kbelf_file_prog_get(file, &prog, i))
-            KBELF_ERROR(abort, "Unable to read program header " KBELF_FMT_SIZE "", i)
+            KBELF_ERROR(abort, "Unable to read program header " KBELF_FMT_SIZE, i)
         loadable_len += kbelf_prog_loadable(&prog);
     }
 
@@ -71,7 +72,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
     for (size_t i = 0, li = 0; li < loadable_len; i++) {
         kbelf_progheader prog = {.type = PT_UNUSED, .mem_size = 0};
         if (!kbelf_file_prog_get(file, &prog, i))
-            KBELF_ERROR(abort, "Unable to read program header " KBELF_FMT_SIZE "", i)
+            KBELF_ERROR(abort, "Unable to read program header " KBELF_FMT_SIZE, i)
         if (!kbelf_prog_loadable(&prog))
             continue;
         if (prog.mem_size < prog.file_size)
@@ -96,7 +97,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
     for (size_t i = 0, li = 0; li < loadable_len; i++) {
         kbelf_progheader prog = {.type = PT_UNUSED, .mem_size = 0};
         if (!kbelf_file_prog_get(file, &prog, i))
-            KBELF_ERROR(abort, "Unable to read program header " KBELF_FMT_SIZE "", i)
+            KBELF_ERROR(abort, "Unable to read program header " KBELF_FMT_SIZE, i)
         if (!kbelf_prog_loadable(&prog))
             continue;
 
@@ -128,7 +129,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
     for (size_t i = 0; i < file->header.ph_ent_num; i++) {
         kbelf_progheader prog = {.type = PT_UNUSED, .mem_size = 0};
         if (!kbelf_file_prog_get(file, &prog, i))
-            KBELF_ERROR(abort, "Unable to read program header " KBELF_FMT_SIZE "", i)
+            KBELF_ERROR(abort, "Unable to read program header " KBELF_FMT_SIZE, i)
         if (prog.type == PT_DYNAMIC) {
             inst->dynamic     = (void *)kbelf_inst_getladdr(inst, prog.vaddr);
             inst->dynamic_len = prog.mem_size / sizeof(kbelf_dynentry);

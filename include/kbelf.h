@@ -103,7 +103,7 @@ void       kbelf_file_close(kbelf_file file);
 size_t kbelf_file_prog_len(kbelf_file file) __attribute__((pure));
 // Get a copy of a program header in an ELF file using a pointer.
 // Returns success status.
-bool   kbelf_file_prog_get(kbelf_file file, kbelf_progheader *prog, size_t index) __attribute__((pure));
+bool   kbelf_file_prog_get(kbelf_file file, kbelf_progheader *prog, size_t index);
 
 
 
