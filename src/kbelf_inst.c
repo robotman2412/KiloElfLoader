@@ -85,6 +85,8 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
         inst->segments[li].r         = prog.flags & PF_R;
         inst->segments[li].w         = prog.flags & PF_W;
         inst->segments[li].x         = prog.flags & PF_X;
+        inst->segments[li].file_off  = prog.offset;
+        inst->segments[li].file_size = prog.file_size;
 
         li++;
     }
@@ -218,6 +220,18 @@ void kbelf_inst_destroy(kbelf_inst inst) {
 // Get the PID number passed when the `kbelf_inst` was created.
 int kbelf_inst_getpid(kbelf_inst inst) {
     return inst->pid;
+}
+
+// Translate a virtual address to an offset in the file.
+long kbelf_inst_getoff(kbelf_inst inst, kbelf_addr vaddr) {
+    if (!inst)
+        return 0;
+    for (size_t i = 0; i < inst->segments_len; i++) {
+        if (vaddr >= inst->segments[i].vaddr_req && vaddr < inst->segments[i].vaddr_req + inst->segments[i].size) {
+            return vaddr - inst->segments[i].vaddr_req + inst->segments[i].file_off;
+        }
+    }
+    return 0;
 }
 
 // Translate a virtual address to a load address in a loaded instance.

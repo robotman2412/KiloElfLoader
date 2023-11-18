@@ -119,6 +119,8 @@ void        kbelf_inst_unload(kbelf_inst inst);
 void        kbelf_inst_destroy(kbelf_inst inst);
 // Get the PID number passed when the `kbelf_inst` was created.
 int         kbelf_inst_getpid(kbelf_inst inst);
+// Translate a virtual address to an offset in the file.
+long        kbelf_inst_getoff(kbelf_inst inst, kbelf_addr vaddr) __attribute__((pure));
 // Translate a virtual address to a load address in a loaded instance.
 // Typically used by an ELF loader/interpreter.
 kbelf_laddr kbelf_inst_getladdr(kbelf_inst inst, kbelf_addr vaddr) __attribute__((pure));

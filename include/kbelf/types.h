@@ -77,6 +77,10 @@ typedef struct {
     kbelf_addr  vaddr_req;
     // Size in memory.
     kbelf_addr  size;
+    // Offset in file.
+    long        file_off;
+    // Size in file.
+    long        file_size;
 
     // Loaded segment read permission.
     bool r;
