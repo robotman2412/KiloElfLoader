@@ -1,5 +1,5 @@
 ---
-Checks:          'clang-diagnostic-*,clang-analyzer-*,readability-identifier-naming,bugprone-*,modernize-*,performance-*,-bugprone-easily-swappable-parameters,-modernize-macro-to-enum,-performance-no-int-to-ptr'
+Checks:          'clang-diagnostic-*,clang-analyzer-*,readability-identifier-naming,bugprone-*,modernize-*,performance-*,-bugprone-multi-level-implicit-pointer-conversion,-bugprone-easily-swappable-parameters,-modernize-macro-to-enum,-performance-no-int-to-ptr'
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
 CheckOptions:
