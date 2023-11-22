@@ -162,7 +162,7 @@ typedef enum {
 #define store(type, ptr, in)                                                                                           \
     do {                                                                                                               \
         for (size_t i = 0; i < sizeof(type); i++) {                                                                    \
-            ptr[i] = (in) >> (8 * i);                                                                                  \
+            (ptr)[i] = (in) >> (8 * i);                                                                                \
         }                                                                                                              \
     } while (0)
 

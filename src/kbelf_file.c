@@ -140,7 +140,7 @@ bool kbelf_file_prog_get(kbelf_file file, kbelf_progheader *prog, size_t index) 
         return false;
     if (index > file->header.ph_ent_num)
         return false;
-    int res = kbelfx_seek(file->fd, file->header.ph_offset + sizeof(kbelf_progheader) * index);
+    int res = kbelfx_seek(file->fd, (long)file->header.ph_offset + (long)sizeof(kbelf_progheader) * (long)index);
     if (res < 0)
         return false;
     res = kbelfx_read(file->fd, prog, sizeof(kbelf_progheader));

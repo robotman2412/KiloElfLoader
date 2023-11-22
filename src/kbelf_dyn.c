@@ -196,7 +196,7 @@ static inline bool has_init_funcs(kbelf_inst inst) {
 }
 
 // Test whether instance A depends directly or indirectly on instance B.
-static bool _depends_on_r(kbelf_dyn dyn, kbelf_inst a, kbelf_inst b, int recursion_limit) {
+static bool depends_on_recursive(kbelf_dyn dyn, kbelf_inst a, kbelf_inst b, size_t recursion_limit) {
     if (recursion_limit == 0)
         return true;
     for (size_t i = 0; i < a->dynamic_len; i++) {
@@ -208,7 +208,7 @@ static bool _depends_on_r(kbelf_dyn dyn, kbelf_inst a, kbelf_inst b, int recursi
                 return true;
             for (size_t x = 0; x < dyn->libs_len; x++) {
                 if (kbelfq_streq(dyn->libs_inst[x]->name, needed)) {
-                    if (_depends_on_r(dyn, dyn->libs_inst[x], b, recursion_limit - 1))
+                    if (depends_on_recursive(dyn, dyn->libs_inst[x], b, recursion_limit - 1))
                         return true;
                 }
             }
@@ -219,7 +219,7 @@ static bool _depends_on_r(kbelf_dyn dyn, kbelf_inst a, kbelf_inst b, int recursi
 
 // Test whether instance A depends directly or indirectly on instance B.
 static inline bool depends_on(kbelf_dyn dyn, kbelf_inst a, kbelf_inst b) {
-    return _depends_on_r(dyn, a, b, dyn->libs_len + 1);
+    return depends_on_recursive(dyn, a, b, dyn->libs_len + 1);
 }
 
 // Comparator for sorting function.
@@ -236,7 +236,7 @@ static inline int comparator(kbelf_dyn dyn, size_t a, size_t b) {
 }
 
 // Sort the initialisation order.
-static void _sort_init_order_r(kbelf_dyn dyn, size_t *arr, size_t len, size_t *tmp) {
+static void sort_init_order_recursive(kbelf_dyn dyn, size_t *arr, size_t len, size_t *tmp) {
     if (len == 1) {
         // Base case: 1 element.
         return;
@@ -254,10 +254,10 @@ static void _sort_init_order_r(kbelf_dyn dyn, size_t *arr, size_t len, size_t *t
     size_t midpoint = len / 2;
 
     // Sort left.
-    _sort_init_order_r(dyn, arr, midpoint, tmp);
+    sort_init_order_recursive(dyn, arr, midpoint, tmp);
 
     // Sort right.
-    _sort_init_order_r(dyn, arr + midpoint, len - midpoint, tmp);
+    sort_init_order_recursive(dyn, arr + midpoint, len - midpoint, tmp);
 
     // Merge.
     for (size_t i = 0, l = 0, r = 0; i < len; i++) {
@@ -278,7 +278,7 @@ static inline bool sort_init_order(kbelf_dyn dyn) {
         size_t *tmp = kbelfx_malloc(sizeof(size_t) * dyn->init_order_len);
         if (!tmp)
             return false;
-        _sort_init_order_r(dyn, dyn->init_order, dyn->init_order_len, tmp);
+        sort_init_order_recursive(dyn, dyn->init_order, dyn->init_order_len, tmp);
         kbelfx_free(tmp);
     }
     return true;
@@ -297,7 +297,7 @@ bool kbelf_dyn_load(kbelf_dyn dyn) {
     // Load the executable.
     dyn->exec_inst = kbelf_inst_load(dyn->exec_file, dyn->pid);
     if (!dyn->exec_inst)
-        KBELF_ERROR(abort, "Unable to load " KBELF_FMT_CSTR "", dyn->exec_file->path)
+        KBELF_ERROR(abort, "Unable to load " KBELF_FMT_CSTR, dyn->exec_file->path)
 
     // Load libraries for the executable.
     if (!check_deps(dyn, dyn->exec_file, dyn->exec_inst))
@@ -308,7 +308,7 @@ bool kbelf_dyn_load(kbelf_dyn dyn) {
         if (!dyn->libs_inst[i]) {
             dyn->libs_inst[i] = kbelf_inst_load(dyn->libs_file[i], dyn->pid);
             if (!dyn->libs_inst[i])
-                KBELF_ERROR(abort, "Unable to load " KBELF_FMT_CSTR "", dyn->libs_inst[i]->path)
+                KBELF_ERROR(abort, "Unable to load " KBELF_FMT_CSTR, dyn->libs_file[i]->path)
         }
         if (!check_deps(dyn, dyn->libs_file[i], dyn->libs_inst[i]))
             KBELF_ERROR(abort, "Unable to satisfy library requirements")

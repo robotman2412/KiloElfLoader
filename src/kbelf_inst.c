@@ -85,8 +85,8 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
         inst->segments[li].r         = prog.flags & PF_R;
         inst->segments[li].w         = prog.flags & PF_W;
         inst->segments[li].x         = prog.flags & PF_X;
-        inst->segments[li].file_off  = prog.offset;
-        inst->segments[li].file_size = prog.file_size;
+        inst->segments[li].file_off  = (long)prog.offset;
+        inst->segments[li].file_size = (long)prog.file_size;
 
         li++;
     }
@@ -105,11 +105,11 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
 
         // Initialised data.
         if (prog.file_size) {
-            int res = kbelfx_seek(file->fd, prog.offset);
+            int res = kbelfx_seek(file->fd, (long)prog.offset);
             if (res < 0)
                 KBELF_ERROR(abort, "I/O error");
             kbelf_laddr laddr = kbelf_inst_paddr_to_laddr(inst, inst->segments[li].paddr);
-            res               = kbelfx_read(file->fd, (void *)laddr, prog.file_size);
+            res               = kbelfx_read(file->fd, (void *)laddr, (long)prog.file_size);
             if (res < (int)prog.file_size)
                 KBELF_ERROR(abort, "I/O error");
         }
@@ -157,7 +157,8 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
             inst->fini_func = kbelf_inst_getvaddr(inst, dt.value);
         } else if (dt.tag == DT_HASH) {
             kbelf_addr *addr = (void *)kbelf_inst_getladdr(inst, dt.value);
-            inst->dynsym_len = addr[1];
+            if (addr != NULL)
+                inst->dynsym_len = addr[1];
         } else if (dt.tag == DT_INIT_ARRAY) {
             inst->init_array = kbelf_inst_getvaddr(inst, dt.value);
         } else if (dt.tag == DT_INIT_ARRAYSZ) {
@@ -228,7 +229,7 @@ long kbelf_inst_getoff(kbelf_inst inst, kbelf_addr vaddr) {
         return 0;
     for (size_t i = 0; i < inst->segments_len; i++) {
         if (vaddr >= inst->segments[i].vaddr_req && vaddr < inst->segments[i].vaddr_req + inst->segments[i].size) {
-            return vaddr - inst->segments[i].vaddr_req + inst->segments[i].file_off;
+            return (long)vaddr - (long)inst->segments[i].vaddr_req + (long)inst->segments[i].file_off;
         }
     }
     return 0;
@@ -241,7 +242,7 @@ kbelf_laddr kbelf_inst_getladdr(kbelf_inst inst, kbelf_addr vaddr) {
         return 0;
     for (size_t i = 0; i < inst->segments_len; i++) {
         if (vaddr >= inst->segments[i].vaddr_req && vaddr < inst->segments[i].vaddr_req + inst->segments[i].size) {
-            return vaddr - inst->segments[i].vaddr_req + inst->segments[i].laddr;
+            return (kbelf_laddr)vaddr - (kbelf_laddr)inst->segments[i].vaddr_req + inst->segments[i].laddr;
         }
     }
     return 0;
@@ -289,7 +290,7 @@ kbelf_laddr kbelf_inst_vaddr_to_laddr(kbelf_inst inst, kbelf_addr vaddr) {
         return 0;
     for (size_t i = 0; i < inst->segments_len; i++) {
         if (vaddr >= inst->segments[i].vaddr_real && vaddr < inst->segments[i].vaddr_real + inst->segments[i].size) {
-            return vaddr - inst->segments[i].vaddr_real + inst->segments[i].laddr;
+            return (kbelf_laddr)vaddr - (kbelf_laddr)inst->segments[i].vaddr_real + inst->segments[i].laddr;
         }
     }
     return 0;
@@ -313,31 +314,31 @@ kbelf_laddr kbelf_inst_paddr_to_laddr(kbelf_inst inst, kbelf_addr vaddr) {
         return 0;
     for (size_t i = 0; i < inst->segments_len; i++) {
         if (vaddr >= inst->segments[i].paddr && vaddr < inst->segments[i].paddr + inst->segments[i].size) {
-            return vaddr - inst->segments[i].paddr + inst->segments[i].laddr;
+            return (kbelf_laddr)vaddr - (kbelf_laddr)inst->segments[i].paddr + inst->segments[i].laddr;
         }
     }
     return 0;
 }
 
 // Translate a load address in a loaded instance to a virtual address in a loaded instance.
-kbelf_addr kbelf_inst_laddr_to_vaddr(kbelf_inst inst, kbelf_laddr vaddr) {
+kbelf_addr kbelf_inst_laddr_to_vaddr(kbelf_inst inst, kbelf_laddr laddr) {
     if (!inst)
         return 0;
     for (size_t i = 0; i < inst->segments_len; i++) {
-        if (vaddr >= inst->segments[i].laddr && vaddr < inst->segments[i].laddr + inst->segments[i].size) {
-            return vaddr - inst->segments[i].laddr + inst->segments[i].vaddr_real;
+        if (laddr >= inst->segments[i].laddr && laddr < inst->segments[i].laddr + inst->segments[i].size) {
+            return (kbelf_addr)laddr - (kbelf_addr)inst->segments[i].laddr + inst->segments[i].vaddr_real;
         }
     }
     return 0;
 }
 
 // Translate a load address in a loaded instance to a physical address in a loaded instance.
-kbelf_addr kbelf_inst_laddr_to_paddr(kbelf_inst inst, kbelf_laddr vaddr) {
+kbelf_addr kbelf_inst_laddr_to_paddr(kbelf_inst inst, kbelf_laddr laddr) {
     if (!inst)
         return 0;
     for (size_t i = 0; i < inst->segments_len; i++) {
-        if (vaddr >= inst->segments[i].laddr && vaddr < inst->segments[i].laddr + inst->segments[i].size) {
-            return vaddr - inst->segments[i].laddr + inst->segments[i].paddr;
+        if (laddr >= inst->segments[i].laddr && laddr < inst->segments[i].laddr + inst->segments[i].size) {
+            return (kbelf_addr)laddr - (kbelf_addr)inst->segments[i].laddr + inst->segments[i].paddr;
         }
     }
     return 0;
@@ -395,5 +396,7 @@ kbelf_addr kbelf_inst_fini_get(kbelf_inst inst, size_t index) {
         index--;
     }
     kbelf_addr *arr = (void *)kbelf_inst_vaddr_to_laddr(inst, inst->fini_array);
+    if (arr == NULL)
+        return 0;
     return index < inst->fini_array_len ? arr[index] : 0;
 }
