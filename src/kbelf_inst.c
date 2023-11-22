@@ -140,6 +140,8 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
     }
 
     // Parse dynamic table.
+    if (!inst->dynamic && inst->dynamic_len)
+        __builtin_unreachable();
     for (size_t i = 0; i < inst->dynamic_len; i++) {
         kbelf_dynentry dt = inst->dynamic[i];
         if (dt.tag == DT_NULL) {
