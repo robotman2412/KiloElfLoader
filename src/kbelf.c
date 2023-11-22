@@ -25,7 +25,7 @@
 #define KBELF_REVEAL_PRIVATE
 #include <kbelf.h>
 
-const uint16_t kbelf_machine_type = KBELF_MACHINE;
+uint16_t const kbelf_machine_type = KBELF_MACHINE;
 
 // Number of built-in libraries.
 // Optional user-defined.
