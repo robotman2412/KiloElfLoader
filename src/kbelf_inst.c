@@ -402,3 +402,15 @@ kbelf_addr kbelf_inst_fini_get(kbelf_inst inst, size_t index) {
         return 0;
     return index < inst->fini_array_len ? arr[index] : 0;
 }
+
+
+
+// Get number of loaded segments.
+size_t kbelf_inst_segment_len(kbelf_inst inst) {
+    return inst->segments_len;
+}
+
+// Get descriptor of a loaded segment.
+kbelf_segment kbelf_inst_segment_get(kbelf_inst inst, size_t index) {
+    return inst->segments[index];
+}
