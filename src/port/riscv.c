@@ -97,14 +97,12 @@ bool kbelfp_file_verify(kbelf_file file) {
         KBELF_ERROR(abort, "Unsupported machine (RVC requested but not supported)")
     }
     if ((file->header.flags & KBELF_RISCV_MASK_FABI) != KBELF_RISCV_HOST_FABI) {
-#ifdef KBELF_DEBUG
         char const *fabi[] = {
             "soft-float",
             "single-precision",
             "double-precision",
             "quadruple-precision",
         };
-#endif
         KBELF_ERROR(
             abort,
             "Unsupported machine (FABI " KBELF_FMT_CSTR " requested; acutal FABI " KBELF_FMT_CSTR ")",

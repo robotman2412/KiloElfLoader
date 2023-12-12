@@ -79,6 +79,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
             KBELF_ERROR(abort, "Invalid program header size")
 
         // Simple translation of values.
+        KBELF_LOGD("Adding segment " KBELF_FMT_SIZE, i)
         inst->segments[li].pid       = pid;
         inst->segments[li].vaddr_req = prog.vaddr;
         inst->segments[li].size      = prog.mem_size;
@@ -108,7 +109,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
             int res = kbelfx_seek(file->fd, (long)prog.offset);
             if (res < 0)
                 KBELF_ERROR(abort, "I/O error");
-            kbelf_laddr laddr = kbelf_inst_paddr_to_laddr(inst, inst->segments[li].paddr);
+            kbelf_laddr laddr = inst->segments[li].laddr;
             res               = kbelfx_read(file->fd, (void *)laddr, (long)prog.file_size);
             if (res < (int)prog.file_size)
                 KBELF_ERROR(abort, "I/O error");

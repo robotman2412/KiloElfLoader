@@ -237,7 +237,6 @@ struct struct_kbelf_dyn {
 
 
 #ifdef KBELF_REVEAL_PRIVATE
-#ifdef KBELF_DEBUG
 
 #ifndef KBELF_FMT_CSTR
 #define KBELF_FMT_CSTR "%s"
@@ -277,6 +276,8 @@ struct struct_kbelf_dyn {
 #endif
 
 #define KBELF_FILENAME (kbelfq_strrchr(__FILE__, '/') ? kbelfq_strrchr(__FILE__, '/') + 1 : __FILE__)
+
+#ifdef KBELF_DEBUG
 #define KBELF_LOGD(fmt, ...)                                                                                           \
     {                                                                                                                  \
         KBELF_LOGGER(                                                                                                  \
@@ -286,6 +287,10 @@ struct struct_kbelf_dyn {
             __LINE__ __VA_OPT__(, ) __VA_ARGS__                                                                        \
         );                                                                                                             \
     }
+#else
+#define KBELF_LOGD(fmt, ...)                                                                                           \
+    {}
+#endif
 
 #define KBELF_LOGI(fmt, ...)                                                                                           \
     {                                                                                                                  \
@@ -319,21 +324,6 @@ struct struct_kbelf_dyn {
 
 #define KBELF_ERROR(jumplabel, reason, ...)                                                                            \
     { KBELF_LOGE(reason __VA_OPT__(, ) __VA_ARGS__) goto jumplabel; }
-
-#else
-
-#define KBELF_ERROR(jumplabel, reason, ...)                                                                            \
-    { goto jumplabel; }
-#define KBELF_LOGD(...)                                                                                                \
-    {}
-#define KBELF_LOGI(...)                                                                                                \
-    {}
-#define KBELF_LOGW(...)                                                                                                \
-    {}
-#define KBELF_LOGE(...)                                                                                                \
-    {}
-
-#endif
 #endif
 
 
