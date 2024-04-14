@@ -178,16 +178,41 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
     }
 
     // Assert presence of both length and pointer fields.
-    if (!!inst->dynsym ^ !!inst->dynsym_len)
-        KBELF_ERROR(abort, "Invalid dynamic section")
-    if (!!inst->dynstr ^ !!inst->dynstr_len)
-        KBELF_ERROR(abort, "Invalid dynamic section")
-    if (!!inst->init_array ^ !!inst->init_array_len)
-        KBELF_ERROR(abort, "Invalid dynamic section")
-    if (!!inst->fini_array ^ !!inst->fini_array_len)
-        KBELF_ERROR(abort, "Invalid dynamic section")
-    if (!!inst->preinit_array ^ !!inst->preinit_array_len)
-        KBELF_ERROR(abort, "Invalid dynamic section")
+    if (!inst->dynsym && inst->dynsym_len)
+        KBELF_ERROR(
+            abort,
+            "Invalid dynamic section (" KBELF_FMT_CSTR " not present but length is " KBELF_FMT_SIZE ")",
+            "dynsym",
+            (size_t)inst->dynsym_len
+        )
+    if (!inst->dynstr && inst->dynstr_len)
+        KBELF_ERROR(
+            abort,
+            "Invalid dynamic section (" KBELF_FMT_CSTR " not present but length is " KBELF_FMT_SIZE ")",
+            "dynstr",
+            inst->dynstr_len
+        )
+    if (!inst->init_array && inst->init_array_len)
+        KBELF_ERROR(
+            abort,
+            "Invalid dynamic section (" KBELF_FMT_CSTR " not present but length is " KBELF_FMT_SIZE ")",
+            "init_array",
+            inst->init_array_len
+        )
+    if (!inst->fini_array && inst->fini_array_len)
+        KBELF_ERROR(
+            abort,
+            "Invalid dynamic section (" KBELF_FMT_CSTR " not present but length is " KBELF_FMT_SIZE ")",
+            "fini_array",
+            inst->fini_array_len
+        )
+    if (!inst->preinit_array && inst->preinit_array_len)
+        KBELF_ERROR(
+            abort,
+            "Invalid dynamic section (" KBELF_FMT_CSTR " not present but length is " KBELF_FMT_SIZE ")",
+            "preinit_array",
+            inst->preinit_array_len
+        )
     return inst;
 
 abort:
