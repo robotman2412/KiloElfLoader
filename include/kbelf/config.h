@@ -30,7 +30,3 @@
 
 #include <kbelf/machine.h>
 #include <kbelf/string.h>
-
-#if KBELF_IS_ELF64
-#error "64-bit ELF is currently unsupported"
-#endif
