@@ -78,7 +78,9 @@ static bool find_sym(kbelf_reloc reloc, char const *sym_name, kbelf_addr *out_va
         kbelf_file file = reloc->libs_file[x];
         kbelf_inst inst = reloc->libs_inst[x];
         for (size_t y = 1; y < inst->dynsym_len; y++) {
-            kbelf_symentry sym = inst->dynsym[y];
+            kbelf_symentry sym = {0};
+            if (!kbelfx_copy_from_user(inst, &sym, inst->dynsym + y * sizeof(kbelf_symentry), sizeof(kbelf_symentry)))
+                KBELF_ERROR(abort, "Invalid rel section (index out of bounds)")
             // Compare the type.
             if (!sym.section)
                 continue;
@@ -86,9 +88,19 @@ static bool find_sym(kbelf_reloc reloc, char const *sym_name, kbelf_addr *out_va
             if (KBELF_ST_BIND(sym.info) == STB_LOCAL)
                 continue;
             // Compare the name.
-            char const *name = inst->dynstr + sym.name_index;
-            if (!kbelfq_streq(name, sym_name))
+            ptrdiff_t len = kbelfx_strlen_from_user(inst, inst->dynstr + sym.name_index);
+            if (len < 0)
+                KBELF_ERROR(abort, "Invalid rel section (index out of bounds)")
+            char *name = kbelfx_malloc(len + 1);
+            if (!name)
+                KBELF_ERROR(abort, "Out of memory")
+            if (!kbelfx_copy_from_user(inst, name, inst->dynstr + sym.name_index, len + 1) || name[len])
+                KBELF_ERROR(abort, "Invalid rel section (index out of bounds)")
+            if (!kbelfq_streq(name, sym_name)) {
+                kbelfx_free(name);
                 continue;
+            }
+            kbelfx_free(name);
             // Eliminate the weak.
             *out_val = get_sym_value(file, inst, sym);
             if (KBELF_ST_BIND(sym.info) != STB_WEAK)
@@ -98,11 +110,12 @@ static bool find_sym(kbelf_reloc reloc, char const *sym_name, kbelf_addr *out_va
     }
 
     return found;
+abort:
+    return false;
 }
 
 // Perform all relocations from a REL table.
-static bool
-    rel_perform(kbelf_reloc reloc, kbelf_file file, kbelf_inst inst, size_t reltab_len, kbelf_relentry const *reltab) {
+static bool rel_perform(kbelf_reloc reloc, kbelf_file file, kbelf_inst inst, size_t reltab_len, kbelf_laddr reltab) {
     (void)reloc;
     (void)file;
     (void)inst;
@@ -113,23 +126,39 @@ static bool
 }
 
 // Perform all relocations from a RELA table.
-static bool rela_perform(
-    kbelf_reloc reloc, kbelf_file file, kbelf_inst inst, size_t relatab_len, kbelf_relaentry const *relatab
-) {
+static bool rela_perform(kbelf_reloc reloc, kbelf_file file, kbelf_inst inst, size_t relatab_len, kbelf_laddr relatab) {
     for (size_t i = 0; i < relatab_len; i++) {
-        kbelf_laddr    laddr  = kbelf_inst_getladdr(inst, relatab[i].offset);
-        size_t         sym    = KBELF_R_SYM(relatab[i].info);
-        uint_fast8_t   type   = KBELF_R_TYPE(relatab[i].info);
-        kbelf_addrdiff addend = relatab[i].addend;
+        kbelf_relaentry ent = {0};
+        if (!kbelfx_copy_from_user(inst, &ent, relatab + i * sizeof(kbelf_relaentry), sizeof(kbelf_relaentry)))
+            KBELF_ERROR(abort, "Invalid rela table (index out of bounds)")
+        kbelf_laddr    laddr  = kbelf_inst_getladdr(inst, ent.offset);
+        size_t         sym    = KBELF_R_SYM(ent.info);
+        uint_fast8_t   type   = KBELF_R_TYPE(ent.info);
+        kbelf_addrdiff addend = ent.addend;
         kbelf_addr     symval;
         if (sym == 0) {
             symval = 0;
         } else {
-            char const *symname = inst->dynstr + inst->dynsym[sym].name_index;
-            if (!find_sym(reloc, symname, &symval))
-                KBELF_ERROR(abort, "Unable to find symbol " KBELF_FMT_CSTR "", symname)
+            kbelf_symentry st = {0};
+            if (!kbelfx_copy_from_user(inst, &st, inst->dynsym + sym * sizeof(kbelf_symentry), sizeof(kbelf_symentry)))
+                KBELF_ERROR(abort, "Unable to find anonymous symbol " KBELF_FMT_SIZE, (int)sym)
+            ptrdiff_t len = kbelfx_strlen_from_user(inst, inst->dynstr + st.name_index);
+            if (len < 0)
+                KBELF_ERROR(abort, "Unable to find anonymous symbol " KBELF_FMT_SIZE, (int)sym)
+            char *symname = kbelfx_malloc(len + 1);
+            if (!symname)
+                KBELF_ERROR(abort, "Out of memory")
+            if (!kbelfx_copy_from_user(inst, symname, inst->dynstr + st.name_index, len + 1) || symname[len]) {
+                kbelfx_free(symname);
+                KBELF_ERROR(abort, "Unable to find anonymous symbol " KBELF_FMT_SIZE, (int)sym)
+            }
+            bool found = find_sym(reloc, symname, &symval);
+            kbelfx_free(symname);
+            if (!found)
+                KBELF_ERROR(abort, "Unable to find symbol " KBELF_FMT_CSTR, symname)
         }
-        if (!kbelfp_reloc_apply(file, inst, type, symval, addend, (uint8_t *)laddr))
+        bool success = kbelfp_reloc_apply(file, inst, type, symval, addend, laddr);
+        if (!success)
             KBELF_ERROR(abort, "Applying relocation 0x" KBELF_FMT_BYTE " failed", type)
     }
     return true;
@@ -148,21 +177,23 @@ bool kbelf_reloc_perform(kbelf_reloc reloc) {
         kbelf_inst inst = reloc->libs_inst[x];
         kbelf_file file = reloc->libs_file[x];
 
-        size_t rel_sz = 0, rela_sz = 0;
-        size_t rel_ent = 0, rela_ent = 0;
-        void  *rel = NULL, *rela = NULL;
+        size_t     rel_sz = 0, rela_sz = 0;
+        size_t     rel_ent = 0, rela_ent = 0;
+        kbelf_addr rel = 0, rela = 0;
 
         // Search for REL and RELA tables.
         for (size_t y = 0; y < inst->dynamic_len; y++) {
-            kbelf_dynentry dyn = inst->dynamic[y];
+            kbelf_dynentry dyn;
+            if (!kbelfx_copy_from_user(inst, &dyn, inst->dynamic + y * sizeof(kbelf_dynentry), sizeof(kbelf_dynentry)))
+                KBELF_ERROR(abort, "Invalid dynamic section (index out of bounds)")
             if (dyn.tag == DT_REL) {
-                rel = (void *)kbelf_inst_getladdr(inst, dyn.value);
+                rel = kbelf_inst_getladdr(inst, dyn.value);
             } else if (dyn.tag == DT_RELSZ) {
                 rel_sz = dyn.value;
             } else if (dyn.tag == DT_RELENT) {
                 rel_ent = dyn.value;
             } else if (dyn.tag == DT_RELA) {
-                rela = (void *)kbelf_inst_getladdr(inst, dyn.value);
+                rela = kbelf_inst_getladdr(inst, dyn.value);
             } else if (dyn.tag == DT_RELASZ) {
                 rela_sz = dyn.value;
             } else if (dyn.tag == DT_RELAENT) {
@@ -176,6 +207,14 @@ bool kbelf_reloc_perform(kbelf_reloc reloc) {
                 KBELF_ERROR(abort, "Invalid REL entry size")
             if (!rel_perform(reloc, file, inst, rel_sz / sizeof(kbelf_relentry), rel))
                 return false;
+        } else if (rel_sz || rel_ent || rel) {
+            KBELF_LOGW("REL partially present")
+            if (rel)
+                KBELF_LOGI("DT_REL: present")
+            if (rel_sz)
+                KBELF_LOGI("DT_RELSZ: present")
+            if (rel_ent)
+                KBELF_LOGI("DT_RELENT: present")
         }
 
         // Apply the RELA.
@@ -184,6 +223,14 @@ bool kbelf_reloc_perform(kbelf_reloc reloc) {
                 KBELF_ERROR(abort, "Invalid RELA entry size")
             if (!rela_perform(reloc, file, inst, rela_sz / sizeof(kbelf_relaentry), rela))
                 return false;
+        } else if (rela_sz || rela_ent || rela) {
+            KBELF_LOGW("RELA partially present")
+            if (rela)
+                KBELF_LOGI("DT_RELA: present")
+            if (rela_sz)
+                KBELF_LOGI("DT_RELASZ: present")
+            if (rela_ent)
+                KBELF_LOGI("DT_RELAENT: present")
         }
     }
 

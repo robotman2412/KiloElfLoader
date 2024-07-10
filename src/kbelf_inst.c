@@ -105,18 +105,12 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
 
         // Initialised data.
         if (prog.file_size) {
-            int res = kbelfx_seek(file->fd, (long)prog.offset);
+            long res = kbelfx_seek(file->fd, (long)prog.offset);
             if (res < 0)
                 KBELF_ERROR(abort, "I/O error");
-            kbelf_laddr laddr = inst->segments[li].laddr;
-            res               = kbelfx_read(file->fd, (void *)laddr, (long)prog.file_size);
-            if (res < (int)prog.file_size)
+            res = kbelfx_load(inst, file->fd, inst->segments[li].laddr, prog.file_size);
+            if (res < (long)prog.file_size)
                 KBELF_ERROR(abort, "I/O error");
-        }
-        // Zero-initialised data.
-        if (prog.file_size < prog.mem_size) {
-            kbelf_laddr laddr = kbelf_inst_paddr_to_laddr(inst, inst->segments[li].paddr + prog.file_size);
-            kbelfq_memset((void *)laddr, 0, prog.mem_size - prog.file_size);
         }
 
         li++;
@@ -133,7 +127,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
         if (!kbelf_file_prog_get(file, &prog, i))
             KBELF_ERROR(abort, "Unable to read program header " KBELF_FMT_SIZE, i)
         if (prog.type == PT_DYNAMIC) {
-            inst->dynamic     = (void *)kbelf_inst_getladdr(inst, prog.vaddr);
+            inst->dynamic     = kbelf_inst_getladdr(inst, prog.vaddr);
             inst->dynamic_len = prog.mem_size / sizeof(kbelf_dynentry);
             break;
         }
@@ -143,14 +137,17 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
     if (!inst->dynamic && inst->dynamic_len)
         __builtin_unreachable();
     for (size_t i = 0; i < inst->dynamic_len; i++) {
-        kbelf_dynentry dt = inst->dynamic[i];
+        kbelf_dynentry dt = {0};
+        if (!kbelfx_copy_from_user(inst, &dt, inst->dynamic + i * sizeof(kbelf_dynentry), sizeof(kbelf_dynentry))) {
+            KBELF_ERROR(abort, "Invalid dynamic section (index out of bounds)")
+        }
         if (dt.tag == DT_NULL) {
             inst->dynamic_len = i;
             break;
         } else if (dt.tag == DT_SYMTAB) {
-            inst->dynsym = (void *)kbelf_inst_getladdr(inst, dt.value);
+            inst->dynsym = kbelf_inst_getladdr(inst, dt.value);
         } else if (dt.tag == DT_STRTAB) {
-            inst->dynstr = (void *)kbelf_inst_getladdr(inst, dt.value);
+            inst->dynstr = kbelf_inst_getladdr(inst, dt.value);
         } else if (dt.tag == DT_STRSZ) {
             inst->dynstr_len = dt.value;
         } else if (dt.tag == DT_INIT) {
@@ -158,9 +155,8 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
         } else if (dt.tag == DT_FINI) {
             inst->fini_func = kbelf_inst_getvaddr(inst, dt.value);
         } else if (dt.tag == DT_HASH) {
-            kbelf_addr *addr = (void *)kbelf_inst_getladdr(inst, dt.value);
-            if (addr != NULL)
-                inst->dynsym_len = addr[1];
+            kbelf_laddr laddr = kbelf_inst_getladdr(inst, dt.value);
+            kbelfx_copy_from_user(inst, &inst->dynsym_len, laddr + 4 * KBELF_CLASS, sizeof(kbelf_addr));
         } else if (dt.tag == DT_INIT_ARRAY) {
             inst->init_array = kbelf_inst_getvaddr(inst, dt.value);
         } else if (dt.tag == DT_INIT_ARRAYSZ) {

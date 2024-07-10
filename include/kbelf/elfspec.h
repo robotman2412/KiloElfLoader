@@ -39,17 +39,24 @@ extern "C" {
 
 
 
-// Load address tyoe.
-typedef size_t   kbelf_laddr;
+// Load address type.
+typedef size_t kbelf_laddr;
+#if KBELF_IS_ELF64
+// ELF address type.
+typedef uint64_t kbelf_addr;
+// ELF addrdiff type.
+typedef int64_t  kbelf_addrdiff;
+#else
 // ELF address type.
 typedef uint32_t kbelf_addr;
 // ELF addrdiff type.
 typedef int32_t  kbelf_addrdiff;
+#endif
 
 // First four bytes of an ELF file.
 static char const     kbelf_magic[4] = {0x7f, 'E', 'L', 'F'};
 // Machine type to check against.
-extern const uint16_t kbelf_machine_type;
+extern uint16_t const kbelf_machine_type;
 
 
 // ELF file type.
@@ -277,9 +284,9 @@ typedef struct {
 // Get the `bind` value from a symbol entry's `info` field.
 #define KBELF_ST_BIND(x)          ((x) >> 4)
 // Get the `type` value from a symbol entry's `info` field.
-#define KBELF_ST_TYPE(x)          ((x)&15)
+#define KBELF_ST_TYPE(x)          ((x) & 15)
 // Combine the `bind` and `type` values into a symbol entry's `info` field.
-#define KBELF_ST_INFO(bind, type) (((bind) << 4) | ((type)&15))
+#define KBELF_ST_INFO(bind, type) (((bind) << 4) | ((type) & 15))
 
 // Dynamic table entry.
 typedef struct {
@@ -294,25 +301,25 @@ typedef struct {
     // Offset in the subject section.
     kbelf_addr offset;
     // Symbol index to apply to, relocation type.
-    uint32_t   info;
+    kbelf_addr info;
 } kbelf_relentry;
 
 // Relocation table entry (with addend).
 typedef struct {
     // Offset in the subject section.
-    kbelf_addr offset;
+    kbelf_addr     offset;
     // Symbol index to apply to, relocation type.
-    uint32_t   info;
+    kbelf_addr     info;
     // Addend.
-    int32_t    addend;
+    kbelf_addrdiff addend;
 } kbelf_relaentry;
 
 // Get the `symbol` value from a relocation entry's `info` field.
 #define KBELF_R_SYM(x)          ((x) >> 8)
 // Get the `type` value from a relocation entry's `info` field.
-#define KBELF_R_TYPE(x)         ((x)&255)
+#define KBELF_R_TYPE(x)         ((x) & 255)
 // Conbine the `symbol` and `type` values into a relocation entry's `info` field.
-#define KBELF_R_INFO(sym, type) (((sym) << 8) | ((type)&255))
+#define KBELF_R_INFO(sym, type) (((sym) << 8) | ((type) & 255))
 
 
 

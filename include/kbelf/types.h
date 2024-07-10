@@ -171,17 +171,17 @@ struct struct_kbelf_inst {
     kbelf_addr fini_array;
 
     // Length of the dynamic table.
-    size_t                dynamic_len;
+    kbelf_addr  dynamic_len;
     // Load address of the dynamic table.
-    kbelf_dynentry const *dynamic;
+    kbelf_laddr dynamic;
     // Length of the dynamic string table.
-    size_t                dynstr_len;
+    kbelf_addr  dynstr_len;
     // Load address of the dynamic string table.
-    char const           *dynstr;
+    kbelf_laddr dynstr;
     // Number of dynamic symbols.
-    size_t                dynsym_len;
+    kbelf_addr  dynsym_len;
     // Load address of dynamic symbol table.
-    kbelf_symentry const *dynsym;
+    kbelf_laddr dynsym;
 };
 
 // Context used to perform relocation.
@@ -289,7 +289,8 @@ struct struct_kbelf_dyn {
     }
 #else
 #define KBELF_LOGD(fmt, ...)                                                                                           \
-    {}
+    {                                                                                                                  \
+    }
 #endif
 
 #define KBELF_LOGI(fmt, ...)                                                                                           \
@@ -323,7 +324,9 @@ struct struct_kbelf_dyn {
     }
 
 #define KBELF_ERROR(jumplabel, reason, ...)                                                                            \
-    { KBELF_LOGE(reason __VA_OPT__(, ) __VA_ARGS__) goto jumplabel; }
+    {                                                                                                                  \
+        KBELF_LOGE(reason __VA_OPT__(, ) __VA_ARGS__) goto jumplabel;                                                  \
+    }
 #endif
 
 

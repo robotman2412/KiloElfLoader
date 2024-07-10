@@ -43,7 +43,7 @@ bool kbelfp_file_verify(kbelf_file file);
 kbelf_addr kbelfp_reloc_get_addend(kbelf_file file, kbelf_inst inst, uint32_t type, uint8_t const *ptr);
 // Compute the resulting value of a relocation.
 bool       kbelfp_reloc_apply(
-          kbelf_file file, kbelf_inst inst, uint32_t type, kbelf_addr sym, kbelf_addr addend, uint8_t *ptr
+          kbelf_file file, kbelf_inst inst, uint32_t type, kbelf_addr sym, kbelf_addr addend, kbelf_laddr laddr
       );
 
 

@@ -66,11 +66,22 @@ extern int   kbelfx_getc(void *fd);
 // Reads a number of bytes from a file.
 // Returns the number of bytes read, or less than that on error.
 // User-defined.
-extern int   kbelfx_read(void *fd, void *buf, int buf_len);
+extern long  kbelfx_read(void *fd, void *buf, long buf_len);
+// Reads a number of bytes from a file to a load address in the program.
+// Returns the number of bytes read, or less than that on error.
+// User-defined.
+extern long  kbelfx_load(kbelf_inst inst, void *fd, kbelf_laddr laddr, long len);
 // Sets the absolute offset in the file.
 // Returns 0 on success, -1 on error.
 // User-defined.
 extern int   kbelfx_seek(void *fd, long pos);
+
+// Read bytes from a load address in the program.
+extern bool      kbelfx_copy_from_user(kbelf_inst inst, void *buf, kbelf_laddr laddr, size_t len);
+// Write bytes to a load address in the program.
+extern bool      kbelfx_copy_to_user(kbelf_inst inst, kbelf_laddr laddr, void *buf, size_t len);
+// Get string length from a load address in the program.
+extern ptrdiff_t kbelfx_strlen_from_user(kbelf_inst inst, kbelf_laddr laddr);
 
 // Find and open a dynamic library file.
 // Returns non-null on success, NULL on error.

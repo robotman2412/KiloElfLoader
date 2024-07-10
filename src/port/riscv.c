@@ -159,9 +159,8 @@ typedef enum {
 // STORE TEMPLATE.
 #define store(type, ptr, in)                                                                                           \
     do {                                                                                                               \
-        for (size_t i = 0; i < sizeof(type); i++) {                                                                    \
-            (ptr)[i] = (in) >> (8 * i);                                                                                \
-        }                                                                                                              \
+        type tmp = (in);                                                                                               \
+        kbelfx_copy_to_user(inst, laddr, &tmp, sizeof(type));                                                          \
     } while (0)
 
 // Obtain the value of an implicit addend.
@@ -180,7 +179,7 @@ kbelf_addr kbelfp_reloc_get_addend(kbelf_file file, kbelf_inst inst, uint32_t ty
 
 // Apply a relocation.
 bool kbelfp_reloc_apply(
-    kbelf_file file, kbelf_inst inst, uint32_t type, kbelf_addr sym, kbelf_addr addend, uint8_t *ptr
+    kbelf_file file, kbelf_inst inst, uint32_t type, kbelf_addr sym, kbelf_addr addend, kbelf_laddr laddr
 ) {
     (void)file;
     switch ((riscv_reloc_t)type) {
