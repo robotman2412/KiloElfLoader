@@ -40,7 +40,8 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
     if (!inst)
         KBELF_ERROR(abort, "Out of memory")
     kbelfq_memset(inst, 0, sizeof(struct struct_kbelf_inst));
-    inst->pid = pid;
+    inst->pid    = pid;
+    inst->is_pie = file->header.type == ET_DYN;
 
     // Copy the path.
     size_t path_len = kbelfq_strlen(file->path);
@@ -240,6 +241,11 @@ void kbelf_inst_destroy(kbelf_inst inst) {
     kbelfx_free(inst);
 }
 
+
+// Check whether an instance is PIE or not.
+bool kbelf_inst_is_pie(kbelf_inst inst) {
+    return inst->is_pie;
+}
 
 // Get the PID number passed when the `kbelf_inst` was created.
 int kbelf_inst_getpid(kbelf_inst inst) {

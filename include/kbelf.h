@@ -109,12 +109,14 @@ kbelf_file kbelf_file_open(char const *path, void *fd);
 // Calls `kbelfx_close` on the `fd` originally provided to `kbelf_file_open`.
 void       kbelf_file_close(kbelf_file file);
 
+// Get a pointer to the ELF file header.
+kbelf_header const *kbelf_file_header(kbelf_file file) __attribute__((pure));
 // Get the number of program headers in an ELF file.
 // Returns 0 when there are no program headers.
-size_t kbelf_file_prog_len(kbelf_file file) __attribute__((pure));
+size_t              kbelf_file_prog_len(kbelf_file file) __attribute__((pure));
 // Get a copy of a program header in an ELF file using a pointer.
 // Returns success status.
-bool   kbelf_file_prog_get(kbelf_file file, kbelf_progheader *prog, size_t index);
+bool                kbelf_file_prog_get(kbelf_file file, kbelf_progheader *prog, size_t index);
 
 
 
@@ -128,8 +130,10 @@ kbelf_inst    kbelf_inst_load(kbelf_file file, int pid);
 void          kbelf_inst_unload(kbelf_inst inst);
 // Clean up the instance handle but not the loaded segments.
 void          kbelf_inst_destroy(kbelf_inst inst);
+// Check whether an instance is PIE or not.
+bool          kbelf_inst_is_pie(kbelf_inst inst) __attribute__((pure));
 // Get the PID number passed when the `kbelf_inst` was created.
-int           kbelf_inst_getpid(kbelf_inst inst);
+int           kbelf_inst_getpid(kbelf_inst inst) __attribute__((pure));
 // Translate a virtual address to an offset in the file.
 long          kbelf_inst_getoff(kbelf_inst inst, kbelf_addr vaddr) __attribute__((pure));
 // Translate a virtual address to a load address in a loaded instance.

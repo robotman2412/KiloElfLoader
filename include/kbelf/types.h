@@ -145,6 +145,8 @@ struct struct_kbelf_inst {
     char const *name;
     // Identifier value as specified when program loading was initiated.
     int         pid;
+    // Whether this is a PIE file.
+    bool        is_pie;
 
     // Number of loaded segments.
     size_t         segments_len;
@@ -289,8 +291,7 @@ struct struct_kbelf_dyn {
     }
 #else
 #define KBELF_LOGD(fmt, ...)                                                                                           \
-    {                                                                                                                  \
-    }
+    {}
 #endif
 
 #define KBELF_LOGI(fmt, ...)                                                                                           \
@@ -324,9 +325,7 @@ struct struct_kbelf_dyn {
     }
 
 #define KBELF_ERROR(jumplabel, reason, ...)                                                                            \
-    {                                                                                                                  \
-        KBELF_LOGE(reason __VA_OPT__(, ) __VA_ARGS__) goto jumplabel;                                                  \
-    }
+    { KBELF_LOGE(reason __VA_OPT__(, ) __VA_ARGS__) goto jumplabel; }
 #endif
 
 

@@ -127,6 +127,11 @@ void kbelf_file_close(kbelf_file file) {
 }
 
 
+// Get a pointer to the ELF file header.
+kbelf_header const *kbelf_file_header(kbelf_file file) {
+    return &file->header;
+}
+
 // Returns the number of program headers in an ELF file.
 // Returns 0 when there are no program headers.
 size_t kbelf_file_prog_len(kbelf_file file) {
