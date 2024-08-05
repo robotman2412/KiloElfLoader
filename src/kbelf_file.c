@@ -65,7 +65,7 @@ kbelf_file kbelf_file_open(char const *path, void *fd) {
 
 
     // Load header.
-    int len = kbelfx_read(file->fd, &file->header, sizeof(file->header));
+    long len = kbelfx_read(file->fd, &file->header, sizeof(file->header));
     if (len != sizeof(file->header))
         KBELF_ERROR(
             abort,
@@ -140,11 +140,11 @@ bool kbelf_file_prog_get(kbelf_file file, kbelf_progheader *prog, size_t index) 
         return false;
     if (index > file->header.ph_ent_num)
         return false;
-    int res = kbelfx_seek(file->fd, (long)file->header.ph_offset + (long)sizeof(kbelf_progheader) * (long)index);
+    long res = kbelfx_seek(file->fd, (long)file->header.ph_offset + (long)sizeof(kbelf_progheader) * (long)index);
     if (res < 0)
         return false;
     res = kbelfx_read(file->fd, prog, sizeof(kbelf_progheader));
-    if (res < (int)sizeof(kbelf_progheader))
+    if (res < (long)sizeof(kbelf_progheader))
         return false;
     return true;
 }

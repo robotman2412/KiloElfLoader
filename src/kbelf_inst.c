@@ -108,7 +108,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
             long res = kbelfx_seek(file->fd, (long)prog.offset);
             if (res < 0)
                 KBELF_ERROR(abort, "I/O error");
-            res = kbelfx_load(inst, file->fd, inst->segments[li].laddr, prog.file_size);
+            res = kbelfx_load(inst, file->fd, inst->segments[li].laddr, (long)prog.file_size);
             if (res < (long)prog.file_size)
                 KBELF_ERROR(abort, "I/O error");
         }
