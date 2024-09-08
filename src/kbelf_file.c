@@ -69,9 +69,9 @@ kbelf_file kbelf_file_open(char const *path, void *fd) {
     if (len != sizeof(file->header))
         KBELF_ERROR(
             abort,
-            "I/O error: expected " KBELF_FMT_SIZE " bytes, got " KBELF_FMT_DEC " bytes",
+            "I/O error: expected " KBELF_FMT_SIZE " bytes, got " KBELF_FMT_SIZE " bytes",
             sizeof(file->header),
-            len
+            (size_t)len
         )
 
 

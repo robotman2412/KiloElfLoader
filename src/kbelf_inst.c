@@ -184,7 +184,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
     if (!inst->dynstr && inst->dynstr_len)
         KBELF_ERROR(
             abort,
-            "Invalid dynamic section (" KBELF_FMT_CSTR " not present but length is " KBELF_FMT_SIZE ")",
+            "Invalid dynamic section (" KBELF_FMT_CSTR " not present but length is " KBELF_FMT_ADDR ")",
             "dynstr",
             inst->dynstr_len
         )

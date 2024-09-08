@@ -252,6 +252,15 @@ struct struct_kbelf_dyn {
 #define KBELF_FMT_SIZE "%zu"
 #endif
 
+#ifndef KBELF_FMT_ADDR
+#include <inttypes.h>
+#if KBELF_IS_ELF64
+#define KBELF_FMT_ADDR "%" PRId64
+#else
+#define KBELF_FMT_ADDR "%" PRId32
+#endif
+#endif
+
 #ifndef KBELF_FMT_BYTE
 #define KBELF_FMT_BYTE "%02x"
 #endif
