@@ -59,10 +59,6 @@ extern void *kbelfx_open(char const *path);
 // Close a file.
 // User-defined.
 extern void  kbelfx_close(void *fd);
-// Reads a single byte from a file.
-// Returns byte on success, -1 on error.
-// User-defined.
-extern int   kbelfx_getc(void *fd);
 // Reads a number of bytes from a file.
 // Returns the number of bytes read, or less than that on error.
 // User-defined.
