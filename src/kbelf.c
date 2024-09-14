@@ -33,5 +33,5 @@ size_t                   kbelfx_builtin_libs_len __attribute__((weak));
 size_t                   kbelfx_builtin_libs_len = 0;
 // Array of built-in libraries.
 // Optional user-defined.
-kbelf_builtin_lib const *kbelfx_builtin_libs __attribute__((weak));
-kbelf_builtin_lib const *kbelfx_builtin_libs = NULL;
+kbelf_builtin_lib const *kbelfx_builtin_libs[] __attribute__((weak));
+kbelf_builtin_lib const *kbelfx_builtin_libs[] = {};

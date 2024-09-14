@@ -157,6 +157,14 @@ static bool rela_perform(kbelf_reloc reloc, kbelf_file file, kbelf_inst inst, si
             if (!found)
                 KBELF_ERROR(abort, "Unable to find symbol " KBELF_FMT_CSTR, symname)
         }
+        KBELF_LOGD(
+            "Applying relocation " KBELF_FMT_DEC " @ " KBELF_FMT_ADDR ": symval " KBELF_FMT_ADDR
+            ", addend " KBELF_FMT_ADDR,
+            (int)type,
+            (kbelf_addr)laddr,
+            symval,
+            (kbelf_addr)addend
+        );
         bool success = kbelfp_reloc_apply(file, inst, type, symval, addend, laddr);
         if (!success)
             KBELF_ERROR(abort, "Applying relocation 0x" KBELF_FMT_BYTE " failed", type)

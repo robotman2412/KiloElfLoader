@@ -42,14 +42,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
     kbelfq_memset(inst, 0, sizeof(struct struct_kbelf_inst));
     inst->pid    = pid;
     inst->is_pie = file->header.type == ET_DYN;
-
-    // Copy the path.
-    size_t path_len = kbelfq_strlen(file->path);
-    inst->path      = kbelfx_malloc(path_len + 1);
-    if (!inst->path)
-        KBELF_ERROR(abort, "Out of memory")
-    kbelfq_memcpy(inst->path, file->path, path_len + 1);
-    inst->name = file->name - file->path + inst->path;
+    inst->file   = file;
 
     // Count number of loadable segments.
     if (!file->header.ph_ent_num)
@@ -88,6 +81,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
         inst->segments[li].x         = prog.flags & PF_X;
         inst->segments[li].file_off  = (long)prog.offset;
         inst->segments[li].file_size = (long)prog.file_size;
+        inst->segments[li].alignment = prog.alignment;
 
         li++;
     }
@@ -109,7 +103,7 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
             long res = kbelfx_seek(file->fd, (long)prog.offset);
             if (res < 0)
                 KBELF_ERROR(abort, "I/O error");
-            res = kbelfx_load(inst, file->fd, inst->segments[li].laddr, (long)prog.file_size);
+            res = kbelfx_load(inst, file->fd, inst->segments[li].laddr, prog.file_size, prog.mem_size);
             if (res < (long)prog.file_size)
                 KBELF_ERROR(abort, "I/O error");
         }
@@ -216,12 +210,15 @@ abort:
     return NULL;
 }
 
+// Get a pointer to the file from which this was created.
+kbelf_file kbelf_inst_getfile(kbelf_inst inst) {
+    return inst->file;
+}
+
 // Unloads an instance created with `kbelf_load` and clean up the handle.
 void kbelf_inst_unload(kbelf_inst inst) {
     if (!inst)
         return;
-    if (inst->path)
-        kbelfx_free(inst->path);
     if (inst->segments_len) {
         kbelfx_seg_free(inst, inst->segments_len, inst->segments);
         kbelfx_free(inst->segments);
@@ -233,8 +230,6 @@ void kbelf_inst_unload(kbelf_inst inst) {
 void kbelf_inst_destroy(kbelf_inst inst) {
     if (!inst)
         return;
-    if (inst->path)
-        kbelfx_free(inst->path);
     if (inst->segments_len) {
         kbelfx_free(inst->segments);
     }

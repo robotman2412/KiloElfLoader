@@ -75,6 +75,8 @@ typedef struct {
     kbelf_addr  vaddr_real;
     // Virtual address as requested by the ELF file.
     kbelf_addr  vaddr_req;
+    // Alignment, must be an integer power of two.
+    kbelf_addr  alignment;
     // Size in memory.
     kbelf_addr  size;
     // Offset in file.
@@ -94,12 +96,8 @@ typedef struct {
 typedef struct {
     // Symbol name.
     char const *name;
-    // Symbol physical address.
-    size_t      paddr;
     // Symbol virtual address.
     size_t      vaddr;
-    // Reserved.
-    size_t      _reserved;
 } kbelf_builtin_sym;
 
 // Definition for a built-in library.
@@ -110,8 +108,6 @@ typedef struct {
     size_t                   symbols_len;
     // Array of symbols.
     kbelf_builtin_sym const *symbols;
-    // Reserved.
-    size_t                   _reserved;
 } kbelf_builtin_lib;
 
 #ifdef KBELF_REVEAL_PRIVATE
@@ -139,14 +135,12 @@ struct struct_kbelf_file {
 
 // Loaded instance of an ELF file.
 struct struct_kbelf_inst {
-    // Copy of the path of the source ELF file.
-    char       *path;
-    // Sub-string of the path that is the name.
-    char const *name;
+    // Pointer to file from which this was created.
+    kbelf_file file;
     // Identifier value as specified when program loading was initiated.
-    int         pid;
+    int        pid;
     // Whether this is a PIE file.
-    bool        is_pie;
+    bool       is_pie;
 
     // Number of loaded segments.
     size_t         segments_len;
@@ -286,7 +280,11 @@ struct struct_kbelf_dyn {
 #define KBELF_LOG_LEVEL_E "\033[31m"
 #endif
 
-#define KBELF_FILENAME (kbelfq_strrchr(__FILE__, '/') ? kbelfq_strrchr(__FILE__, '/') + 1 : __FILE__)
+#ifdef __FILE_NAME__
+#define KBELF_FILENAME __FILE_NAME__
+#else
+#define KBELF_FILENAME __FILE__
+#endif
 
 #ifdef KBELF_DEBUG
 #define KBELF_LOGD(fmt, ...)                                                                                           \

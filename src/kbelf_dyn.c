@@ -38,7 +38,6 @@ kbelf_dyn kbelf_dyn_create(int pid) {
     return dyn;
 
 abort:
-    kbelf_dyn_destroy(dyn);
     return NULL;
 }
 
@@ -125,8 +124,8 @@ static bool add_lib(kbelf_dyn dyn, kbelf_file file, kbelf_inst inst) {
 // Find a built-in library.
 static kbelf_builtin_lib const *find_builtin(char const *needed) {
     for (size_t i = 0; i < kbelfx_builtin_libs_len; i++) {
-        if (kbelfq_streq(path_to_filename(needed), path_to_filename(kbelfx_builtin_libs[i].path)))
-            return &kbelfx_builtin_libs[i];
+        if (kbelfq_streq(path_to_filename(needed), path_to_filename(kbelfx_builtin_libs[i]->path)))
+            return kbelfx_builtin_libs[i];
     }
     return NULL;
 }
@@ -165,7 +164,10 @@ static bool check_deps(kbelf_dyn dyn, kbelf_file file, kbelf_inst inst) {
         kbelf_dynentry dt = {0};
         if (!kbelfx_copy_from_user(inst, &dt, inst->dynamic + i * sizeof(kbelf_dynentry), sizeof(kbelf_dynentry)))
             KBELF_ERROR(abort, "Invalid dynamic section (index out of bounds)")
-        if (dt.tag == DT_NEEDED) {
+        if (dt.tag == DT_NULL) {
+            inst->dynamic_len = i - 1;
+            break;
+        } else if (dt.tag == DT_NEEDED) {
             ptrdiff_t len = kbelfx_strlen_from_user(inst, inst->dynstr + dt.value);
             if (len < 0)
                 KBELF_ERROR(abort, "Invalid dynamic section (index out of bounds)")
@@ -186,14 +188,17 @@ static bool check_deps(kbelf_dyn dyn, kbelf_file file, kbelf_inst inst) {
                 } else {
                     // If built-in fails, check for external libs.
                     kbelf_file lib = kbelfx_find_lib(needed);
+                    if (!lib)
+                        KBELF_LOGE("Unable to find " KBELF_FMT_CSTR, needed)
                     kbelfx_free(needed);
                     if (!lib)
-                        KBELF_ERROR(abort, "Unable to find " KBELF_FMT_CSTR "", needed)
+                        goto abort;
                     if (!add_lib(dyn, lib, NULL))
                         KBELF_ERROR(abort, "Out of memory")
                 }
+            } else {
+                kbelfx_free(needed);
             }
-            kbelfx_free(needed);
         }
     }
 
@@ -230,12 +235,12 @@ static bool depends_on_recursive(kbelf_dyn dyn, kbelf_inst a, kbelf_inst b, size
                 KBELF_ERROR(abort, "Invalid dynamic section (index out of bounds)")
             }
             char const *file = path_to_filename(needed);
-            if (kbelfq_streq(file, b->name)) {
+            if (kbelfq_streq(file, b->file->name)) {
                 kbelfx_free(needed);
                 return true;
             }
             for (size_t x = 0; x < dyn->libs_len; x++) {
-                if (kbelfq_streq(dyn->libs_inst[x]->name, file)) {
+                if (kbelfq_streq(dyn->libs_inst[x]->file->name, file)) {
                     if (depends_on_recursive(dyn, dyn->libs_inst[x], b, recursion_limit - 1)) {
                         kbelfx_free(needed);
                         return true;
@@ -354,9 +359,11 @@ bool kbelf_dyn_load(kbelf_dyn dyn) {
     }
 
     // Allocate memory.
-    dyn->init_order = kbelfx_malloc(sizeof(size_t) * dyn->init_order_len);
-    if (!dyn->init_order)
-        KBELF_ERROR(abort, "Out of memory")
+    if (dyn->init_order_len) {
+        dyn->init_order = kbelfx_malloc(sizeof(size_t) * dyn->init_order_len);
+        if (!dyn->init_order)
+            KBELF_ERROR(abort, "Out of memory")
+    }
 
     // Compute initialisation order.
     for (size_t i = 0, li = 0; i < dyn->libs_len; i++) {

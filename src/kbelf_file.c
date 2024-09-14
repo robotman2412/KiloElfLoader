@@ -112,6 +112,11 @@ abort:
     return NULL;
 }
 
+// Get the file descriptor in use by the `kbelf_file`.
+void *kbelf_file_getfd(kbelf_file file) {
+    return file->fd;
+}
+
 // Clean up a `kbelf_file` context.
 // Calls `kbelfx_close` on the `fd` originally provided to `kbelf_file_open`.
 void kbelf_file_close(kbelf_file file) {

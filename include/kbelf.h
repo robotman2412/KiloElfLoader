@@ -66,7 +66,7 @@ extern long  kbelfx_read(void *fd, void *buf, long buf_len);
 // Reads a number of bytes from a file to a load address in the program.
 // Returns the number of bytes read, or less than that on error.
 // User-defined.
-extern long  kbelfx_load(kbelf_inst inst, void *fd, kbelf_laddr laddr, long len);
+extern long  kbelfx_load(kbelf_inst inst, void *fd, kbelf_laddr laddr, kbelf_laddr file_size, kbelf_laddr mem_size);
 // Sets the absolute offset in the file.
 // Returns 0 on success, -1 on error.
 // User-defined.
@@ -89,7 +89,7 @@ extern kbelf_file kbelfx_find_lib(char const *needed);
 extern size_t                   kbelfx_builtin_libs_len;
 // Array of built-in libraries.
 // Optional user-defined.
-extern kbelf_builtin_lib const *kbelfx_builtin_libs;
+extern kbelf_builtin_lib const *kbelfx_builtin_libs[];
 
 
 
@@ -101,6 +101,8 @@ extern kbelf_builtin_lib const *kbelfx_builtin_libs;
 // KBELF calls `kbelfx_close` on `fd` when `kbelf_file_close` is called on an `kbelf_file` or when `kbelf_file_open`
 // fails. Returns non-null on success, NULL on error.
 kbelf_file kbelf_file_open(char const *path, void *fd);
+// Get the file descriptor in use by the `kbelf_file`.
+void      *kbelf_file_getfd(kbelf_file file) __attribute__((pure));
 // Clean up a `kbelf_file` context.
 // Calls `kbelfx_close` on the `fd` originally provided to `kbelf_file_open`.
 void       kbelf_file_close(kbelf_file file);
@@ -122,6 +124,8 @@ bool                kbelf_file_prog_get(kbelf_file file, kbelf_progheader *prog,
 // The `pid` number is passed to `kbelfx_seg_alloc` and is otherwise ignored.
 // Returns non-null on success, NULL on error.
 kbelf_inst    kbelf_inst_load(kbelf_file file, int pid);
+// Get a pointer to the file from which this was created.
+kbelf_file    kbelf_inst_getfile(kbelf_inst inst) __attribute__((pure));
 // Unloads an instance created with `kbelf_load` and clean up the handle.
 void          kbelf_inst_unload(kbelf_inst inst);
 // Clean up the instance handle but not the loaded segments.
