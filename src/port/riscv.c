@@ -157,7 +157,7 @@ typedef enum {
 } riscv_reloc_t;
 
 // STORE TEMPLATE.
-#define store(type, ptr, in)                                                                                           \
+#define store(type, in)                                                                                                \
     do {                                                                                                               \
         type tmp = (in);                                                                                               \
         kbelfx_copy_to_user(inst, laddr, &tmp, sizeof(type));                                                          \
@@ -183,14 +183,14 @@ bool kbelfp_reloc_apply(
 ) {
     (void)file;
     switch ((riscv_reloc_t)type) {
-        case ABS32: store(uint32_t, ptr, S + A); return true;
+        case ABS32: store(uint32_t, S + A); return true;
 
-        case ABS64: store(uint64_t, ptr, S + A); return true;
+        case ABS64: store(uint64_t, S + A); return true;
 
-        case RELATIVE: store(kbelf_addr, ptr, B + A); return true;
+        case RELATIVE: store(kbelf_addr, B + A); return true;
 
         case JUMP_SLOT:
-            store(kbelf_addr, ptr, S);
+            store(kbelf_addr, S);
             return true;
 
             // TODO: TLS_* relocations.
