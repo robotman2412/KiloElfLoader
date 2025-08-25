@@ -153,9 +153,9 @@ static bool rela_perform(kbelf_reloc reloc, kbelf_file file, kbelf_inst inst, si
                 KBELF_ERROR(abort, "Unable to find anonymous symbol " KBELF_FMT_SIZE, (int)sym)
             }
             bool found = find_sym(reloc, symname, &symval);
-            kbelfx_free(symname);
             if (!found)
                 KBELF_ERROR(abort, "Unable to find symbol " KBELF_FMT_CSTR, symname)
+            kbelfx_free(symname);
         }
         KBELF_LOGD(
             "Applying relocation " KBELF_FMT_DEC " @ " KBELF_FMT_ADDR ": symval " KBELF_FMT_ADDR
