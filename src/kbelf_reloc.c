@@ -43,6 +43,8 @@ void kbelf_reloc_destroy(kbelf_reloc reloc) {
         kbelfx_free(reloc->libs_file);
     if (reloc->libs_inst)
         kbelfx_free(reloc->libs_inst);
+    if (reloc->builtins)
+        kbelfx_free(reloc->builtins);
     kbelfx_free(reloc);
 }
 
