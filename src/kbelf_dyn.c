@@ -58,6 +58,8 @@ void kbelf_dyn_destroy(kbelf_dyn dyn) {
         kbelfx_free(dyn->libs_file);
         kbelfx_free(dyn->libs_inst);
     }
+    if (dyn->builtins_len)
+        kbelfx_free(dyn->builtins);
     if (dyn->init_order)
         kbelfx_free(dyn->init_order);
     kbelfx_free(dyn);
