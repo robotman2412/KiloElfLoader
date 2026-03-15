@@ -25,6 +25,12 @@
 #define KBELF_REVEAL_PRIVATE
 #include <kbelf.h>
 
+// Default no-op cache sync for platforms with coherent caches.
+__attribute__((weak)) void kbelfx_cache_sync(kbelf_laddr addr, size_t size) {
+    (void)addr;
+    (void)size;
+}
+
 // Create a dynamic executable loading context.
 // Returns non-null on success, NULL on error.
 kbelf_dyn kbelf_dyn_create(int pid) {
@@ -392,6 +398,18 @@ bool kbelf_dyn_load(kbelf_dyn dyn) {
     if (!kbelf_reloc_perform(reloc))
         KBELF_ERROR(abort, "Relocation failed")
     kbelf_reloc_destroy(reloc);
+
+    // Synchronize caches for all loaded segments.
+    for (size_t i = 0; i < dyn->exec_inst->segments_len; i++) {
+        kbelf_segment *seg = &dyn->exec_inst->segments[i];
+        kbelfx_cache_sync(seg->laddr, seg->size);
+    }
+    for (size_t i = 0; i < dyn->libs_len; i++) {
+        for (size_t j = 0; j < dyn->libs_inst[i]->segments_len; j++) {
+            kbelf_segment *seg = &dyn->libs_inst[i]->segments[j];
+            kbelfx_cache_sync(seg->laddr, seg->size);
+        }
+    }
 
     // Success.
     dyn->entrypoint = dyn->exec_inst->entry;

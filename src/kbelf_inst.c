@@ -106,6 +106,9 @@ kbelf_inst kbelf_inst_load(kbelf_file file, int pid) {
             res = kbelfx_load(inst, file->fd, inst->segments[li].laddr, prog.file_size, prog.mem_size);
             if (res < (long)prog.file_size)
                 KBELF_ERROR(abort, "I/O error");
+        } else if (prog.mem_size) {
+            // Pure BSS segment — zero the memory.
+            kbelfq_memset((void *)inst->segments[li].laddr, 0, prog.mem_size);
         }
 
         li++;

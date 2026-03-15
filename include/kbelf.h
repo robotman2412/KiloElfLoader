@@ -72,6 +72,13 @@ extern long  kbelfx_load(kbelf_inst inst, void *fd, kbelf_laddr laddr, kbelf_lad
 // User-defined.
 extern int   kbelfx_seek(void *fd, long pos);
 
+// Synchronize caches for a loaded segment.
+// Called after loading and relocation to ensure instruction cache coherence.
+// On platforms with non-coherent I/D caches, this should flush the data cache
+// and invalidate the instruction cache for the given address range.
+// Default implementation is a no-op. Override in platform port if needed.
+extern void kbelfx_cache_sync(kbelf_laddr addr, size_t size);
+
 // Read bytes from a load address in the program.
 extern bool      kbelfx_copy_from_user(kbelf_inst inst, void *buf, kbelf_laddr laddr, size_t len);
 // Write bytes to a load address in the program.
