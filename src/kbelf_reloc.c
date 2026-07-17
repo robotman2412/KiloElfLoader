@@ -22,6 +22,7 @@
     SOFTWARE.
 */
 
+#include "kbelf/elfspec.h"
 #define KBELF_REVEAL_PRIVATE
 #include <kbelf.h>
 #include <kbelf/port.h>
@@ -59,21 +60,9 @@ static inline kbelf_addr get_sym_value(kbelf_file file, kbelf_inst inst, kbelf_s
 }
 
 // Look up a symbol in a relocation context.
-static bool find_sym(kbelf_reloc reloc, char const *sym_name, kbelf_addr *out_val) {
+static bool find_sym(kbelf_inst for_inst, kbelf_reloc reloc, char const *sym_name, kbelf_addr *out_val) {
     // TODO: Proper handling of "symbolic" (own file first instead of default order) linking.
     bool found = false;
-
-    for (size_t x = 0; x < reloc->builtins_len; x++) {
-        // Look up builtin library.
-        kbelf_builtin_lib const *lib = reloc->builtins[x];
-        for (size_t y = 0; y < lib->symbols_len; y++) {
-            kbelf_builtin_sym sym = lib->symbols[y];
-            if (!kbelfq_streq(sym.name, sym_name))
-                continue;
-            *out_val = sym.vaddr;
-            return true;
-        }
-    }
 
     for (size_t x = 0; x < reloc->libs_len; x++) {
         // Look up a loaded instance.
@@ -86,8 +75,8 @@ static bool find_sym(kbelf_reloc reloc, char const *sym_name, kbelf_addr *out_va
             // Compare the type.
             if (!sym.section)
                 continue;
-            // TODO: Proper handling of local symbols.
-            if (KBELF_ST_BIND(sym.info) == STB_LOCAL)
+            // STB_LOCAL symbols only match if for a relocation from within the same object.
+            if (KBELF_ST_BIND(sym.info) == STB_LOCAL && inst != for_inst)
                 continue;
             // Compare the name.
             ptrdiff_t len = kbelfx_strlen_from_user(inst, inst->dynstr + sym.name_index);
@@ -103,11 +92,24 @@ static bool find_sym(kbelf_reloc reloc, char const *sym_name, kbelf_addr *out_va
                 continue;
             }
             kbelfx_free(name);
-            // Eliminate the weak.
+            // If bound weak, we may keep looking for a strong symbol.
+            // Return the address immediately for strong symbols.
             *out_val = get_sym_value(file, inst, sym);
             if (KBELF_ST_BIND(sym.info) != STB_WEAK)
                 return true;
             found = true;
+        }
+    }
+
+    for (size_t x = 0; x < reloc->builtins_len; x++) {
+        // Look up builtin library.
+        kbelf_builtin_lib const *lib = reloc->builtins[x];
+        for (size_t y = 0; y < lib->symbols_len; y++) {
+            kbelf_builtin_sym sym = lib->symbols[y];
+            if (!kbelfq_streq(sym.name, sym_name))
+                continue;
+            *out_val = sym.vaddr;
+            return true;
         }
     }
 
@@ -154,7 +156,7 @@ static bool rela_perform(kbelf_reloc reloc, kbelf_file file, kbelf_inst inst, si
                 kbelfx_free(symname);
                 KBELF_ERROR(abort, "Unable to find anonymous symbol " KBELF_FMT_SIZE, (int)sym)
             }
-            bool found = find_sym(reloc, symname, &symval);
+            bool found = find_sym(inst, reloc, symname, &symval);
             if (!found)
                 KBELF_ERROR(abort, "Unable to find symbol " KBELF_FMT_CSTR, symname)
             kbelfx_free(symname);
@@ -208,6 +210,8 @@ bool kbelf_reloc_perform(kbelf_reloc reloc) {
                 rela_sz = dyn.value;
             } else if (dyn.tag == DT_RELAENT) {
                 rela_ent = dyn.value;
+            } else if (dyn.tag == DT_SYMBOLIC) {
+                KBELF_LOGW("Encountered DT_SYMBOLIC, but it is not yet supported")
             }
         }
 
